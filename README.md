@@ -16,8 +16,9 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
 1. **Ordner wählen**: den Ordner mit den Datenbanken freigeben (Storage Access Framework).
    Scid-Datenbanken bestehen aus drei Dateien, deshalb wird der ganze Ordner freigegeben.
    Alternativ öffnet **Dateien öffnen** einzelne Dateien, etwa aus der Nextcloud-App. Bei Scid und Scidb genügt
-   eine Datei der Datenbank; die App fragt dann nach dem Ordner, sucht die übrigen Dateien dort und übernimmt
-   den Ordner in die Liste, in der jede Datenbank als ein Eintrag erscheint.
+   eine Datei der Datenbank: Liegt sie in einem schon freigegebenen Ordner (oder einem Unterordner davon), öffnet
+   die App die Datenbank direkt. Sonst fragt sie einmalig nach dem Ordner, denn Android erlaubt den Zugriff auf
+   die übrigen Dateien nur mit Ordnerfreigabe. Fehlt eine Datei der Datenbank, meldet die App welche.
 2. Datenbank antippen, um die Partieliste zu sehen. Das Suchfeld durchsucht Spieler, Turnier, Ort, Datum, ECO und Runde.
    Langes Drücken auf eine Partie setzt oder entfernt die Löschmarkierung (nur Scid 5).
 3. Partie antippen, um die Brettansicht zu öffnen.

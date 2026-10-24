@@ -96,9 +96,12 @@ class SafFileSet(
 
 object SafStorage {
 
-    /** Listet alle Datenbanken im Ordner (nicht rekursiv). */
-    fun listDatabases(ctx: Context, treeUri: Uri): List<DbEntry> {
-        val docId = DocumentsContract.getTreeDocumentId(treeUri)
+    /** Listet alle Datenbanken im Ordner [docId] des freigegebenen Baums (nicht rekursiv). */
+    fun listDatabases(
+        ctx: Context,
+        treeUri: Uri,
+        docId: String = DocumentsContract.getTreeDocumentId(treeUri),
+    ): List<DbEntry> {
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
         val docs = ArrayList<Triple<String, Long, Uri>>()
         ctx.contentResolver.query(
@@ -116,7 +119,39 @@ object SafStorage {
                 docs.add(Triple(name, size, DocumentsContract.buildDocumentUriUsingTree(treeUri, c.getString(0))))
             }
         }
-        return group(docs).filter { it.complete }
+        return group(docs)
+    }
+
+    /**
+     * Sucht die Datenbank, zu der das einzeln ausgewählte Dokument [doc] gehört, in den bereits
+     * freigegebenen Ordnern [trees] (auch in Unterordnern). Liefert Ordner und Datenbank, auch unvollständig.
+     */
+    fun findInTrees(ctx: Context, doc: Uri, trees: List<Uri>): Pair<Uri, DbEntry>? {
+        val docId = DocumentsContract.getDocumentId(doc)
+        for (tree in trees) {
+            if (tree.authority != doc.authority) continue
+            val parentId = parentInTree(ctx, tree, docId) ?: continue
+            val entry = listDatabases(ctx, tree, parentId).firstOrNull { e ->
+                e.files.values.any { DocumentsContract.getDocumentId(it) == docId }
+            } ?: continue
+            return tree to entry
+        }
+        return null
+    }
+
+    /** Ordner, in dem [docId] innerhalb von [tree] liegt, oder null wenn es nicht dazugehört. */
+    private fun parentInTree(ctx: Context, tree: Uri, docId: String): String? {
+        val rootId = DocumentsContract.getTreeDocumentId(tree)
+        try {
+            val path = DocumentsContract.findDocumentPath(
+                ctx.contentResolver, DocumentsContract.buildDocumentUriUsingTree(tree, docId),
+            )?.path
+            if (path != null && path.size >= 2) return path[path.size - 2]
+        } catch (_: Exception) {
+            // Anbieter kennt keine Pfade oder Dokument liegt nicht im Ordner
+        }
+        // Ersatz: nur direkt im freigegebenen Ordner suchen
+        return rootId
     }
 
     /** Fasst einzeln ausgewählte Dokumente zu Datenbanken zusammen (auch unvollständige). */

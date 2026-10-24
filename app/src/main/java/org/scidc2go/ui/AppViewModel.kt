@@ -20,6 +20,7 @@ package org.scidc2go.ui
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -125,7 +126,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val uri = folderUri ?: return
         viewModelScope.launch {
             try {
-                dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri) }
+                dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri).filter { it.complete } }
             } catch (e: Exception) {
                 message = "Ordner nicht lesbar: ${e.message}"
             }
@@ -170,48 +171,64 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Unvollständig ausgewählte Scid-/Scidb-Datenbank: Die Oberfläche fragt dann nach dem Ordner,
-     * damit die übrigen Dateien gefunden werden.
+     * Scid-/Scidb-Datei aus einem noch nicht freigegebenen Ordner: Die Oberfläche fragt dann einmal
+     * nach dem Ordner, damit die übrigen Dateien gelesen werden können.
      */
     var siblingRequest by mutableStateOf<DbEntry?>(null)
         private set
 
-    /** Öffnet einzeln ausgewählte Dateien. Fehlende Teile einer Datenbank werden im Ordner gesucht. */
+    /**
+     * Öffnet einzeln ausgewählte Dateien. Bei Scid und Scidb genügt eine Datei der Datenbank;
+     * die übrigen werden in den bereits freigegebenen Ordnern gesucht.
+     */
     fun openDocuments(uris: List<Uri>) {
         if (uris.isEmpty()) return
         runBusy("Öffne …") {
             val entries = withContext(Dispatchers.IO) { SafStorage.groupDocuments(ctx, uris) }
-            val entry = entries.firstOrNull { it.complete }
-            if (entry == null) {
-                val e = entries.firstOrNull()
-                if (e == null) message = "Kein bekanntes Datenbankformat" else siblingRequest = e
-                return@runBusy
+            entries.firstOrNull { it.complete }?.let { openEntry(null, it); return@runBusy }
+            val e = entries.firstOrNull() ?: run { message = "Kein bekanntes Datenbankformat"; return@runBusy }
+            val found = withContext(Dispatchers.IO) {
+                SafStorage.findInTrees(ctx, e.files.values.first(), grantedTrees())
             }
-            openEntry(null, entry)
+            if (found == null) siblingRequest = e else openFound(found.first, found.second)
         }
     }
 
     fun cancelSiblingRequest() { siblingRequest = null }
 
-    /**
-     * Übernimmt [tree] als Datenbank-Ordner (die Liste zeigt dann jede Datenbank als einen Eintrag)
-     * und öffnet die zuvor ausgewählte Datenbank daraus.
-     */
+    /** Übernimmt [tree] als Datenbank-Ordner und öffnet die zuvor ausgewählte Datenbank daraus. */
     fun openFromFolder(tree: Uri?) {
         val want = siblingRequest ?: return
         siblingRequest = null
         if (tree == null) return
         setFolder(tree)
         runBusy("Öffne ${want.baseName} …") {
-            val entry = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, tree) }
-                .firstOrNull { it.baseName == want.baseName && it.format == want.format }
-            if (entry == null) {
-                message = "Im Ordner fehlen Dateien: " + want.format.exts.joinToString(", ") { "${want.baseName}.$it" }
+            val found = withContext(Dispatchers.IO) {
+                SafStorage.findInTrees(ctx, want.files.values.first(), listOf(tree))
+            }
+            if (found == null) {
+                message = "${want.baseName} liegt nicht in diesem Ordner"
                 return@runBusy
             }
-            openEntry(tree, entry)
+            openFound(found.first, found.second)
         }
     }
+
+    /** Öffnet eine im Ordner gefundene Datenbank oder meldet, welche Dateien fehlen. */
+    private suspend fun openFound(tree: Uri, entry: DbEntry) {
+        if (!entry.complete) {
+            message = "Es fehlen Dateien: " +
+                entry.format.exts.filter { it !in entry.files }.joinToString(", ") { "${entry.baseName}.$it" }
+            return
+        }
+        openEntry(tree, entry)
+    }
+
+    /** Ordner, für die die App eine dauerhafte Lesefreigabe hat. */
+    private fun grantedTrees(): List<Uri> =
+        ctx.contentResolver.persistedUriPermissions
+            .filter { it.isReadPermission && DocumentsContract.isTreeUri(it.uri) }
+            .map { it.uri }
 
     private suspend fun openEntry(tree: Uri?, entry: DbEntry) {
         val newDb = withContext(Dispatchers.IO) {
@@ -251,7 +268,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (clean.isEmpty()) return
         runBusy("Lege $clean an …") {
             withContext(Dispatchers.IO) { SafStorage.createScid5(ctx, uri, clean).close() }
-            dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri) }
+            dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri).filter { it.complete } }
             dbEntries.firstOrNull { it.baseName == clean && it.format == DbFormat.SCID5 }?.let { openDatabase(it) }
         }
     }
@@ -457,7 +474,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         runBusy("Lege $clean an …") {
             withContext(Dispatchers.IO) { SafStorage.createScid5(ctx, uri, clean).use { it.addGame(g) } }
             message = "In neuer Datenbank $clean gespeichert"
-            dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri) }
+            dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri).filter { it.complete } }
         }
     }
 

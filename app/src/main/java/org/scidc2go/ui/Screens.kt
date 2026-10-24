@@ -249,8 +249,9 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
                 Text(
                     "Eine ${e.format.label}-Datenbank besteht aus " +
                         e.format.exts.joinToString(", ") { "${e.baseName}.$it" } +
-                        ". Damit die App alle Dateien lesen kann, bestätige im nächsten Schritt den Ordner " +
-                        "(„Diesen Ordner verwenden“). Er erscheint dann in der Liste, jede Datenbank als ein Eintrag.",
+                        ". Damit die App die übrigen Dateien lesen kann, gib im nächsten Schritt einmalig den Ordner " +
+                        "frei („Diesen Ordner verwenden“). Danach öffnen sich Datenbanken aus diesem Ordner " +
+                        "und seinen Unterordnern direkt.",
                 )
             },
             confirmButton = {
