@@ -24,9 +24,14 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur antippen, dann das Zielfeld antippen. Weicht der Zug von der Partie ab, entsteht eine Variante.
    - Ein Zug in der Zugliste springt zu dieser Stellung.
-   - Schalter **Analyse** startet Stockfish. Ein Antippen einer Engine-Variante spielt deren ersten Zug.
+   - Schalter **Analyse** startet die gewählte Engine. Ein Antippen einer Engine-Variante spielt deren ersten Zug.
    - Menü: Partiedaten, Kommentar, Variante hochstufen oder löschen, PGN/FEN kopieren, PGN einfügen.
    - **Speichern**: in die geöffnete Scid-5-Datenbank (ersetzen oder neu) oder in eine andere bzw. neue Scid-5-Datenbank im Ordner.
+
+4. **Einstellungen** (Zahnrad): Darstellung hell, dunkel oder wie im System, und die Engine für die Analyse.
+   Neben dem eingebauten Stockfish erscheinen dort Engines aus installierten Engine-Apps nach dem
+   Open-Exchange-Standard (OEX). Weil Android 10 und neuer Apps keine Programme aus ihrem Datenverzeichnis
+   starten lässt, kopiert die App solche Engines und startet sie über den System-Linker (`/system/bin/linker64`).
 
 ## Bauen
 

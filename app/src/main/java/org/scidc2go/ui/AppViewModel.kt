@@ -44,6 +44,8 @@ import org.scidc2go.chess.rankOf
 import org.scidc2go.chess.typeOf
 import org.scidc2go.db.ChessDatabase
 import org.scidc2go.engine.EngineLine
+import org.scidc2go.engine.OexEngine
+import org.scidc2go.engine.OexEngines
 import org.scidc2go.engine.StockfishNet
 import org.scidc2go.engine.UciEngine
 import org.scidc2go.storage.DbEntry
@@ -53,11 +55,17 @@ import java.io.File
 
 enum class Screen { FILES, GAMES, BOARD }
 
+enum class ThemeMode(val label: String) { SYSTEM("Wie System"), LIGHT("Hell"), DARK("Dunkel") }
+
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val ctx get() = getApplication<Application>()
     private val prefs = app.getSharedPreferences("scidc2go", 0)
 
     var screen by mutableStateOf(Screen.FILES)
+    var themeMode by mutableStateOf(
+        ThemeMode.entries.firstOrNull { it.name == prefs.getString("theme", null) } ?: ThemeMode.SYSTEM,
+    )
+        private set
     var folderUri by mutableStateOf<Uri?>(prefs.getString("folder", null)?.let(Uri::parse))
         private set
     var dbEntries by mutableStateOf<List<DbEntry>>(emptyList())
@@ -101,8 +109,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var multiPv by mutableIntStateOf(prefs.getInt("multipv", 2))
         private set
     private var engine: UciEngine? = null
+    /** Gewählte Engine: leer für das mitgelieferte Stockfish, sonst [OexEngine.id]. */
+    var engineId by mutableStateOf(prefs.getString("engine", "") ?: "")
+        private set
+    /** Engines aus installierten Engine-Apps, aktualisiert mit [refreshEngines]. */
+    var oexEngines by mutableStateOf<List<OexEngine>>(emptyList())
+        private set
 
     init {
+        refreshEngines()
         folderUri?.let { refreshFolder() }
         newGame()
     }
@@ -515,14 +530,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             engineLines = emptyList()
             return
         }
-        if (!StockfishNet.file(ctx.filesDir).exists()) {
+        val oex = selectedOex()
+        if (engineId.isNotEmpty() && oex == null) {
+            message = "Die gewählte Engine ist nicht mehr installiert, nehme Stockfish"
+            selectEngine("")
+        }
+        if (oex == null && !StockfishNet.file(ctx.filesDir).exists()) {
             netRequest = true
             return
         }
-        runBusy("Starte Stockfish …") {
-            val e = withContext(Dispatchers.IO) { startEngine() }
+        runBusy("Starte ${oex?.name ?: "Stockfish"} …") {
+            val e = withContext(Dispatchers.IO) { startEngine(oex) }
             engine = e
             engineOn = true
+            engineName = oex?.name ?: "Stockfish"
+            if (e.exited) engineExited(e, oex)
             analyzeCurrent()
         }
     }
@@ -551,23 +573,75 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         analyzeCurrent()
     }
 
-    private fun startEngine(): UciEngine {
-        val exe = File(ctx.applicationInfo.nativeLibraryDir, "libstockfish.so")
-        if (!exe.exists()) throw IllegalStateException("Stockfish ist für dieses Gerät nicht enthalten")
+    // ------------------------------------------------------------------
+    // Einstellungen
+
+    fun changeTheme(mode: ThemeMode) {
+        themeMode = mode
+        prefs.edit().putString("theme", mode.name).apply()
+    }
+
+    fun refreshEngines() {
+        viewModelScope.launch {
+            oexEngines = withContext(Dispatchers.IO) {
+                try { OexEngines.list(ctx) } catch (_: Exception) { emptyList() }
+            }
+        }
+    }
+
+    /** Wählt die Engine ([OexEngine.id], leer für Stockfish); eine laufende Analyse wird neu gestartet. */
+    fun selectEngine(id: String) {
+        if (id == engineId) return
+        engineId = id
+        prefs.edit().putString("engine", id).apply()
+        if (engineOn) {
+            toggleEngine()
+            toggleEngine()
+        }
+    }
+
+    /** Anzeigename der gewählten Engine. */
+    val engineLabel get() = selectedOex()?.name ?: "Stockfish"
+
+    private fun selectedOex(): OexEngine? =
+        if (engineId.isEmpty()) null else oexEngines.firstOrNull { it.id == engineId }
+
+    private fun startEngine(oex: OexEngine?): UciEngine {
         val options = LinkedHashMap<String, String>()
-        options["EvalFile"] = StockfishNet.file(ctx.filesDir).absolutePath
+        val command = if (oex != null) {
+            OexEngines.command(ctx, oex)
+        } else {
+            val exe = File(ctx.applicationInfo.nativeLibraryDir, "libstockfish.so")
+            if (!exe.exists()) throw IllegalStateException("Stockfish ist für dieses Gerät nicht enthalten")
+            options["EvalFile"] = StockfishNet.file(ctx.filesDir).absolutePath
+            listOf(exe.absolutePath)
+        }
         val cores = Runtime.getRuntime().availableProcessors()
         options["Threads"] = maxOf(1, minOf(4, cores - 1)).toString()
         options["Hash"] = "64"
         options["MultiPV"] = multiPv.toString()
-        val e = UciEngine(exe, options) { lines, name ->
-            viewModelScope.launch(Dispatchers.Main) {
-                engineLines = lines
-                engineName = name
-            }
-        }
+        lateinit var e: UciEngine
+        e = UciEngine(
+            command, ctx.filesDir, options,
+            onUpdate = { lines, name ->
+                viewModelScope.launch(Dispatchers.Main) {
+                    engineLines = lines
+                    engineName = name
+                }
+            },
+            onExit = { viewModelScope.launch(Dispatchers.Main) { engineExited(e, oex) } },
+        )
         e.start()
         return e
+    }
+
+    private fun engineExited(e: UciEngine, oex: OexEngine?) {
+        if (engine !== e) return
+        engine = null
+        engineOn = false
+        engineLines = emptyList()
+        message = "${oex?.name ?: "Stockfish"} wurde unerwartet beendet" +
+            e.lastOutput.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
     }
 
     private fun analyzeCurrent() {

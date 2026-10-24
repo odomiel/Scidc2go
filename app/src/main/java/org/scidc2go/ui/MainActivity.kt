@@ -19,10 +19,13 @@ package org.scidc2go.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.graphics.Color
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
 
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
@@ -31,7 +34,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         if (savedInstanceState == null) handleIntent(intent)
-        setContent { Scidc2goApp(vm) }
+        setContent {
+            // Statusleiste passend zur gewählten Darstellung
+            val dark = isDarkTheme(vm)
+            LaunchedEffect(dark) {
+                val style = if (dark) SystemBarStyle.dark(Color.TRANSPARENT)
+                else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                enableEdgeToEdge(style, style)
+            }
+            Scidc2goApp(vm)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

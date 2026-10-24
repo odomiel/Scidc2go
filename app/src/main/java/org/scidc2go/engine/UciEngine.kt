@@ -40,13 +40,16 @@ data class EngineLine(
 }
 
 /**
- * Startet eine UCI-Engine als eigenen Prozess (z.B. das mitgelieferte Stockfish)
+ * Startet eine UCI-Engine mit [command] als eigenen Prozess (z.B. das mitgelieferte Stockfish)
  * und liefert die Analyse über [onUpdate].
  */
 class UciEngine(
-    private val executable: File,
+    private val command: List<String>,
+    private val workDir: File,
     private val options: Map<String, String>,
     private val onUpdate: (List<EngineLine>, String) -> Unit,
+    /** Die Engine hat sich von selbst beendet (z.B. abgestürzt oder nicht startbar). */
+    private val onExit: () -> Unit = {},
 ) {
     private var process: Process? = null
     private var writer: OutputStreamWriter? = null
@@ -57,10 +60,15 @@ class UciEngine(
     @Volatile private var pendingBestmoves = 0
     var name = "Engine"
         private set
+    /** Die Engine hat sich beendet; [lastOutput] ist ihre letzte Ausgabe (z.B. eine Fehlermeldung). */
+    @Volatile var exited = false
+        private set
+    @Volatile var lastOutput = ""
+        private set
 
     fun start() {
-        val p = ProcessBuilder(executable.absolutePath)
-            .directory(executable.parentFile)
+        val p = ProcessBuilder(command)
+            .directory(workDir)
             .redirectErrorStream(true)
             .start()
         process = p
@@ -75,6 +83,7 @@ class UciEngine(
         try {
             while (true) {
                 val line = reader.readLine() ?: break
+                if (line.isNotBlank()) lastOutput = line
                 when {
                     line.startsWith("id name ") -> name = line.substring(8)
                     line.startsWith("info ") && line.contains(" pv ") -> if (pendingBestmoves == 0) parseInfo(line)
@@ -82,6 +91,10 @@ class UciEngine(
                 }
             }
         } catch (_: Exception) {
+        }
+        if (process != null) {
+            exited = true
+            onExit()
         }
     }
 

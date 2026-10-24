@@ -28,6 +28,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -58,6 +59,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -76,6 +78,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -106,9 +109,17 @@ import org.scidc2go.chess.Game
 import org.scidc2go.engine.StockfishNet
 import org.scidc2go.storage.DbEntry
 
+/** Dunkles Farbschema je nach Einstellung oder System. */
+@Composable
+fun isDarkTheme(vm: AppViewModel): Boolean = when (vm.themeMode) {
+    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    ThemeMode.LIGHT -> false
+    ThemeMode.DARK -> true
+}
+
 @Composable
 fun Scidc2goApp(vm: AppViewModel) {
-    val dark = isSystemInDarkTheme()
+    val dark = isDarkTheme(vm)
     MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
         val snackbar = remember { SnackbarHostState() }
         LaunchedEffect(vm.message) {
@@ -184,6 +195,7 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
     }
     var newDbDialog by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
+    var settings by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -192,6 +204,7 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
                 actions = {
                     IconButton({ vm.refreshFolder() }) { Icon(Icons.Default.Refresh, "Aktualisieren") }
                     IconButton({ pickFolder.launch(vm.folderUri) }) { Icon(Icons.Default.Folder, "Ordner wählen") }
+                    IconButton({ vm.refreshEngines(); settings = true }) { Icon(Icons.Default.Settings, "Einstellungen") }
                     IconButton({ about = true }) { Icon(Icons.Default.Info, "Über") }
                 },
             )
@@ -241,6 +254,7 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
         }
     }
     if (about) AboutDialog { about = false }
+    if (settings) SettingsDialog(vm) { settings = false }
     vm.siblingRequest?.let { e ->
         AlertDialog(
             onDismissRequest = { vm.cancelSiblingRequest() },
@@ -279,6 +293,50 @@ fun NameDialog(title: String, label: String, initial: String = "", onDismiss: ()
         confirmButton = { TextButton({ onOk(text) }, enabled = text.isNotBlank()) { Text("OK") } },
         dismissButton = { TextButton(onDismiss) { Text("Abbrechen") } },
     )
+}
+
+@Composable
+fun SettingsDialog(vm: AppViewModel, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Einstellungen") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Darstellung", fontWeight = FontWeight.Bold)
+                for (m in ThemeMode.entries) {
+                    RadioRow(m.label, vm.themeMode == m) { vm.changeTheme(m) }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Engine", fontWeight = FontWeight.Bold)
+                RadioRow("Stockfish (eingebaut)", vm.engineId.isEmpty()) { vm.selectEngine("") }
+                for (e in vm.oexEngines) {
+                    RadioRow(e.name, vm.engineId == e.id) { vm.selectEngine(e.id) }
+                }
+                Text(
+                    if (vm.oexEngines.isEmpty()) {
+                        "Weitere Engines erscheinen hier, wenn Engine-Apps nach dem Open-Exchange-Standard (OEX) installiert sind."
+                    } else {
+                        "Weitere Engines stammen aus installierten Engine-Apps (Open Exchange)."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onDismiss) { Text("OK") } },
+    )
+}
+
+@Composable
+private fun RadioRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().selectable(selected, onClick = onClick).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected, onClick = null)
+        Spacer(Modifier.width(8.dp))
+        Text(label)
+    }
 }
 
 @Composable
@@ -560,7 +618,7 @@ private fun EnginePanel(vm: AppViewModel) {
             Spacer(Modifier.width(8.dp))
             val depth = vm.engineLines.firstOrNull()?.depth
             Text(
-                if (vm.engineOn) "${vm.engineName}${depth?.let { " · Tiefe $it" } ?: ""}" else "Analyse (Stockfish)",
+                if (vm.engineOn) "${vm.engineName}${depth?.let { " · Tiefe $it" } ?: ""}" else "Analyse (${vm.engineLabel})",
                 Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
