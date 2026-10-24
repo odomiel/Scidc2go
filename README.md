@@ -22,7 +22,8 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
 2. Datenbank antippen, um die Partieliste zu sehen. Das Suchfeld durchsucht Spieler, Turnier, Ort, Datum, ECO und Runde.
    Langes Drücken auf eine Partie setzt oder entfernt die Löschmarkierung (nur Scid 5).
 3. Partie antippen, um die Brettansicht zu öffnen.
-   - Züge eingeben: Figur antippen, dann das Zielfeld antippen. Weicht der Zug von der Partie ab, entsteht eine Variante.
+   - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
+     Weicht der Zug von der Partie ab, entsteht eine Variante.
    - Ein Zug in der Zugliste springt zu dieser Stellung.
    - **Analyse** im Menü (⋮) startet die gewählte Engine. Ihre Varianten stehen über dem Brett (im Querformat
      daneben); ein Antippen einer Variante spielt deren ersten Zug.

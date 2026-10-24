@@ -21,11 +21,16 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -34,9 +39,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -74,7 +84,8 @@ fun pieceRes(piece: Int): Int {
 }
 
 /**
- * Schachbrett. Züge werden durch Antippen von Start- und Zielfeld eingegeben.
+ * Schachbrett. Züge werden durch Ziehen einer Figur auf das Zielfeld eingegeben
+ * oder durch Antippen von Start- und Zielfeld.
  * [candidates] liefert die passenden legalen Züge (mehrere bei Umwandlung).
  */
 @Composable
@@ -89,72 +100,145 @@ fun BoardView(
 ) {
     var selected by remember(pos) { mutableStateOf(-1) }
     var promoChoices by remember { mutableStateOf<List<Move>>(emptyList()) }
+    // gerade gezogene Figur: Startfeld und Fingerposition
+    var dragFrom by remember(pos) { mutableStateOf(-1) }
+    var dragPos by remember(pos) { mutableStateOf(Offset.Zero) }
+    var dragOver by remember(pos) { mutableStateOf(-1) }
     val targets = remember(pos, selected) { if (selected >= 0) legalTargets(selected) else emptySet() }
+    val currentCandidates by rememberUpdatedState(candidates)
+    val currentOnMove by rememberUpdatedState(onMove)
 
-    Column(modifier.aspectRatio(1f)) {
-        for (row in 0..7) {
-            Row(Modifier.weight(1f)) {
-                for (col in 0..7) {
-                    val file = if (flipped) 7 - col else col
-                    val rank = if (flipped) row else 7 - row
-                    val sq = square(file, rank)
-                    val light = (file + rank) % 2 == 1
-                    val piece = pos.board[sq]
-                    val bg = when {
-                        sq == selected -> SELECT
-                        lastMove != null && !lastMove.isNull && (sq == lastMove.from || sq == lastMove.to) -> HIGHLIGHT
-                        else -> Color.Transparent
-                    }
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxSize()
-                            .background(if (light) LIGHT else DARK)
-                            .background(bg)
-                            .clickable {
-                                if (selected >= 0 && sq != selected) {
-                                    val ms = candidates(selected, sq)
-                                    when {
-                                        ms.size == 1 -> { onMove(ms[0]); selected = -1 }
-                                        ms.size > 1 -> { promoChoices = ms; selected = -1 }
-                                        piece != EMPTY && colorOf(piece) == pos.toMove -> selected = sq
-                                        else -> selected = -1
-                                    }
-                                } else if (sq == selected) {
-                                    selected = -1
-                                } else if (piece != EMPTY && colorOf(piece) == pos.toMove) {
-                                    selected = sq
-                                }
-                            },
-                    ) {
-                        if (piece != EMPTY) {
-                            Image(
-                                painterResource(pieceRes(piece)), null,
-                                Modifier.fillMaxSize().padding(1.dp),
-                            )
+    fun own(sq: Int) = pos.board[sq] != EMPTY && colorOf(pos.board[sq]) == pos.toMove
+
+    /** Versucht den Zug [from]–[to]; liefert false, wenn er nicht legal ist. */
+    fun tryMove(from: Int, to: Int): Boolean {
+        val ms = currentCandidates(from, to)
+        when {
+            ms.size == 1 -> currentOnMove(ms[0])
+            ms.size > 1 -> promoChoices = ms
+            else -> return false
+        }
+        selected = -1
+        return true
+    }
+
+    fun tap(sq: Int) {
+        when {
+            sq == selected -> selected = -1
+            selected >= 0 && tryMove(selected, sq) -> {}
+            own(sq) -> selected = sq
+            else -> selected = -1
+        }
+    }
+
+    BoxWithConstraints(modifier.aspectRatio(1f)) {
+        val squareSize = maxWidth / 8
+        Column(
+            Modifier.fillMaxSize().pointerInput(pos, flipped) {
+                val sqPx = size.width / 8f
+                fun squareAt(o: Offset): Int {
+                    val col = (o.x / sqPx).toInt()
+                    val row = (o.y / sqPx).toInt()
+                    if (o.x < 0 || o.y < 0 || col > 7 || row > 7) return -1
+                    return square(if (flipped) 7 - col else col, if (flipped) row else 7 - row)
+                }
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val from = squareAt(down.position)
+                    var dragging = false
+                    var last = down.position
+                    while (true) {
+                        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        last = change.position
+                        if (!dragging && from >= 0 && own(from) &&
+                            (last - down.position).getDistance() > viewConfiguration.touchSlop
+                        ) {
+                            dragging = true
+                            selected = from
+                            dragFrom = from
                         }
-                        if (sq in targets) {
-                            Canvas(Modifier.fillMaxSize()) {
-                                val r = size.minDimension / (if (piece == EMPTY) 6.5f else 2.1f)
-                                if (piece == EMPTY) {
-                                    drawCircle(Color(0x55000000), r)
-                                } else {
-                                    drawCircle(Color(0x55000000), r, style = androidx.compose.ui.graphics.drawscope.Stroke(size.minDimension / 12))
+                        if (dragging) {
+                            dragPos = last
+                            dragOver = squareAt(last)
+                            change.consume()
+                        }
+                    }
+                    if (dragging) {
+                        dragFrom = -1
+                        dragOver = -1
+                        val to = squareAt(last)
+                        // zurück aufs Startfeld: Figur bleibt ausgewählt
+                        if (to != from && (to < 0 || !tryMove(from, to))) selected = -1
+                    } else if (from >= 0) {
+                        tap(from)
+                    }
+                }
+            },
+        ) {
+            for (row in 0..7) {
+                Row(Modifier.weight(1f)) {
+                    for (col in 0..7) {
+                        val file = if (flipped) 7 - col else col
+                        val rank = if (flipped) row else 7 - row
+                        val sq = square(file, rank)
+                        val light = (file + rank) % 2 == 1
+                        val piece = pos.board[sq]
+                        val bg = when {
+                            sq == selected || sq == dragOver -> SELECT
+                            lastMove != null && !lastMove.isNull && (sq == lastMove.from || sq == lastMove.to) -> HIGHLIGHT
+                            else -> Color.Transparent
+                        }
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .fillMaxSize()
+                                .background(if (light) LIGHT else DARK)
+                                .background(bg),
+                        ) {
+                            if (piece != EMPTY && sq != dragFrom) {
+                                Image(
+                                    painterResource(pieceRes(piece)), null,
+                                    Modifier.fillMaxSize().padding(1.dp),
+                                )
+                            }
+                            if (sq in targets) {
+                                Canvas(Modifier.fillMaxSize()) {
+                                    val r = size.minDimension / (if (piece == EMPTY) 6.5f else 2.1f)
+                                    if (piece == EMPTY) {
+                                        drawCircle(Color(0x55000000), r)
+                                    } else {
+                                        drawCircle(Color(0x55000000), r, style = androidx.compose.ui.graphics.drawscope.Stroke(size.minDimension / 12))
+                                    }
                                 }
                             }
-                        }
-                        val coordColor = if (light) DARK else LIGHT
-                        if (col == 0) {
-                            Text("${rank + 1}", Modifier.align(Alignment.TopStart).padding(start = 2.dp),
-                                color = coordColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        }
-                        if (row == 7) {
-                            Text("${'a' + file}", Modifier.align(Alignment.BottomEnd).padding(end = 2.dp),
-                                color = coordColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            val coordColor = if (light) DARK else LIGHT
+                            if (col == 0) {
+                                Text("${rank + 1}", Modifier.align(Alignment.TopStart).padding(start = 2.dp),
+                                    color = coordColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                            if (row == 7) {
+                                Text("${'a' + file}", Modifier.align(Alignment.BottomEnd).padding(end = 2.dp),
+                                    color = coordColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
             }
+        }
+        // gezogene Figur etwas vergrößert und über dem Finger, damit sie sichtbar bleibt
+        if (dragFrom >= 0) {
+            val piece = pos.board[dragFrom]
+            val dragSize = squareSize * 1.5f
+            Image(
+                painterResource(pieceRes(piece)), null,
+                Modifier
+                    .offset {
+                        val half = dragSize.toPx() / 2
+                        IntOffset((dragPos.x - half).roundToInt(), (dragPos.y - dragSize.toPx() * 0.9f).roundToInt())
+                    }
+                    .size(dragSize),
+            )
         }
     }
 
