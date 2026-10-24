@@ -9,4 +9,3 @@ dist/
 .kotlin/
 # Erzeugt von tools/build-stockfish.sh
 app/src/main/jniLibs/
-app/src/main/assets/*.nnue

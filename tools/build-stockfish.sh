@@ -1,7 +1,8 @@
 #!/bin/sh
 # Baut Stockfish (GPLv3) mit dem Android-NDK fuer alle unterstuetzten ABIs
 # und legt die Binaries als libstockfish.so in app/src/main/jniLibs ab.
-# Das NNUE-Netz wird nicht eingebettet, sondern einmal als Asset mitgeliefert.
+# Das NNUE-Netz wird nicht eingebettet; die App lädt es beim ersten Start der Engine.
+# Name und Größe des Netzes werden in StockfishNet.kt eingetragen.
 #
 # Aufruf: tools/build-stockfish.sh [Stockfish-Quellverzeichnis]
 set -e
@@ -31,6 +32,8 @@ for pair in armv8:arm64-v8a armv7:armeabi-v7a x86-64:x86_64; do
 done
 
 NET=$(grep '#define EvalFileDefaultName' evaluate.h | sed 's/.*"\(.*\)".*/\1/')
-mkdir -p "$ROOT/app/src/main/assets"
-cp "$NET" "$ROOT/app/src/main/assets/$NET"
-echo "Fertig: Netz $NET, Binaries in app/src/main/jniLibs"
+SIZE=$(stat -c %s "$NET")
+KT="$ROOT/app/src/main/java/org/scidc2go/engine/StockfishNet.kt"
+sed -i -e "s/const val NAME = \".*\"/const val NAME = \"$NET\"/" \
+    -e "s/const val SIZE = .*L/const val SIZE = ${SIZE}L/" "$KT"
+echo "Fertig: Netz $NET ($SIZE Bytes) in StockfishNet.kt eingetragen, Binaries in app/src/main/jniLibs"

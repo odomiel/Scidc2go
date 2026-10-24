@@ -4,7 +4,8 @@ Schachdatenbanken unterwegs: eine schlanke Android-App für Smartphone und Table
 
 - **Lesen:** Scid 3 (`.si3`), Scid 4 (`.si4`), Scid 5 (`.si5`), Scidb (`.sci`, Dateiversion 94), PGN
 - **Schreiben:** Scid 5. Partien ersetzen, neu anhängen, zum Löschen markieren, neue Datenbanken anlegen
-- **Analyse:** Stockfish 19 ist eingebaut (NNUE, 1–5 Varianten)
+- **Analyse:** Stockfish 19 ist eingebaut (NNUE, 1–5 Varianten). Das Netz (98 MB) lädt die App beim ersten
+  Einschalten der Analyse einmalig von stockfishchess.org; nur dafür braucht sie die Internet-Berechtigung.
 - **Ansichten:** Datenbankliste mit Suche und Brettansicht mit Zugliste, Varianten, Kommentaren und Bewertungszeichen.
   Auf Tablets (ab 840 dp Breite) stehen Partieliste und Brett nebeneinander.
 
@@ -31,7 +32,7 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
 Benötigt: JDK 17, Android SDK (Plattform 35) und für Stockfish das Android NDK (r27c oder neuer).
 
 ```sh
-tools/build-stockfish.sh        # Stockfish für arm64-v8a, armeabi-v7a, x86_64 + NNUE-Netz
+tools/build-stockfish.sh        # Stockfish für arm64-v8a, armeabi-v7a, x86_64; trägt das NNUE-Netz in StockfishNet.kt ein
 ./gradlew assembleRelease       # APK: app/build/outputs/apk/release/
 ./gradlew testDebugUnitTest     # Unit-Tests
 ```

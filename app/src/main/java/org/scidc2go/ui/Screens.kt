@@ -103,6 +103,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.input.KeyboardType
 import org.scidc2go.chess.Game
+import org.scidc2go.engine.StockfishNet
 import org.scidc2go.storage.DbEntry
 
 @Composable
@@ -134,6 +135,21 @@ fun Scidc2goApp(vm: AppViewModel) {
                         }
                         vm.screen == Screen.GAMES -> GamesScreen(vm, snackbar, compact = false)
                         else -> BoardScreen(vm, snackbar, wide = false)
+                    }
+                    if (vm.netRequest) {
+                        AlertDialog(
+                            onDismissRequest = { vm.cancelNetRequest() },
+                            title = { Text("Stockfish-Netz laden") },
+                            text = {
+                                Text(
+                                    "Für die Analyse braucht Stockfish sein Bewertungsnetz " +
+                                        "(${StockfishNet.SIZE / 1_000_000} MB). Es wird einmalig von " +
+                                        "stockfishchess.org geladen, am besten im WLAN.",
+                                )
+                            },
+                            confirmButton = { TextButton({ vm.downloadNet() }) { Text("Laden") } },
+                            dismissButton = { TextButton({ vm.cancelNetRequest() }) { Text("Abbrechen") } },
+                        )
                     }
                     vm.busy?.let { label ->
                         Surface(

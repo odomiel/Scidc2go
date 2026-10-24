@@ -43,6 +43,7 @@ import org.scidc2go.chess.rankOf
 import org.scidc2go.chess.typeOf
 import org.scidc2go.db.ChessDatabase
 import org.scidc2go.engine.EngineLine
+import org.scidc2go.engine.StockfishNet
 import org.scidc2go.engine.UciEngine
 import org.scidc2go.storage.DbEntry
 import org.scidc2go.storage.DbFormat
@@ -497,11 +498,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             engineLines = emptyList()
             return
         }
+        if (!StockfishNet.file(ctx.filesDir).exists()) {
+            netRequest = true
+            return
+        }
         runBusy("Starte Stockfish …") {
             val e = withContext(Dispatchers.IO) { startEngine() }
             engine = e
             engineOn = true
             analyzeCurrent()
+        }
+    }
+
+    /** Das Stockfish-Netz fehlt noch: Die Oberfläche fragt, ob es geladen werden soll. */
+    var netRequest by mutableStateOf(false)
+        private set
+
+    fun cancelNetRequest() { netRequest = false }
+
+    /** Lädt das Stockfish-Netz und startet danach die Engine. */
+    fun downloadNet() {
+        netRequest = false
+        runBusy("Lade Stockfish-Netz …") {
+            withContext(Dispatchers.IO) {
+                StockfishNet.download(ctx.filesDir) { p -> busy = "Lade Stockfish-Netz … ${(p * 100).toInt()} %" }
+            }
+            toggleEngine()
         }
     }
 
@@ -515,18 +537,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun startEngine(): UciEngine {
         val exe = File(ctx.applicationInfo.nativeLibraryDir, "libstockfish.so")
         if (!exe.exists()) throw IllegalStateException("Stockfish ist für dieses Gerät nicht enthalten")
-        val netName = ctx.assets.list("")?.firstOrNull { it.endsWith(".nnue") }
         val options = LinkedHashMap<String, String>()
-        if (netName != null) {
-            val net = File(ctx.filesDir, netName)
-            if (!net.exists()) {
-                ctx.filesDir.listFiles()?.filter { it.name.endsWith(".nnue") }?.forEach { it.delete() }
-                val tmp = File(ctx.filesDir, "$netName.tmp")
-                ctx.assets.open(netName).use { input -> tmp.outputStream().use { input.copyTo(it, 1 shl 16) } }
-                tmp.renameTo(net)
-            }
-            options["EvalFile"] = net.absolutePath
-        }
+        options["EvalFile"] = StockfishNet.file(ctx.filesDir).absolutePath
         val cores = Runtime.getRuntime().availableProcessors()
         options["Threads"] = maxOf(1, minOf(4, cores - 1)).toString()
         options["Hash"] = "64"
