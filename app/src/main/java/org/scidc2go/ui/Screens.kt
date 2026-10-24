@@ -499,6 +499,12 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                     IconButton({ saveDialog = true }) { Icon(Icons.Default.Save, "Speichern") }
                     IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, "Menü") }
                     DropdownMenu(menu, { menu = false }) {
+                        DropdownMenuItem(
+                            { Text("Analyse (${vm.engineLabel})") },
+                            trailingIcon = { Switch(vm.engineOn, onCheckedChange = null) },
+                            onClick = { menu = false; vm.toggleEngine() },
+                        )
+                        HorizontalDivider()
                         DropdownMenuItem({ Text("Neue Partie") }, onClick = { menu = false; vm.newGame() })
                         DropdownMenuItem({ Text("Partiedaten bearbeiten") }, onClick = { menu = false; tagDialog = true })
                         DropdownMenuItem({ Text("Kommentar zum Zug") }, enabled = !node.isRoot || true,
@@ -549,18 +555,18 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                         board(Modifier.weight(1f, fill = false))
                         NavBar(vm)
                     }
+                    // Im Querformat ist über dem Brett kein Platz: Analyse oben neben dem Brett
                     Column(Modifier.weight(1f).fillMaxHeight()) {
                         EnginePanel(vm)
-                        HorizontalDivider()
                         MoveListView(game, node, vm.treeVersion, { vm.goTo(it) }, Modifier.weight(1f).fillMaxWidth())
                         AnnotationBar(vm)
                     }
                 }
             } else {
                 Column(Modifier.fillMaxSize()) {
+                    EnginePanel(vm)
                     board(Modifier.fillMaxWidth())
                     NavBar(vm)
-                    EnginePanel(vm)
                     HorizontalDivider()
                     MoveListView(game, node, vm.treeVersion, { vm.goTo(it) }, Modifier.weight(1f).fillMaxWidth())
                     AnnotationBar(vm)
@@ -610,35 +616,34 @@ private fun AnnotationBar(vm: AppViewModel) {
     }
 }
 
+/** Analyse über dem Brett; ein- und ausgeschaltet wird sie im Menü. */
 @Composable
 private fun EnginePanel(vm: AppViewModel) {
+    if (!vm.engineOn) return
     Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Switch(vm.engineOn, { vm.toggleEngine() })
-            Spacer(Modifier.width(8.dp))
             val depth = vm.engineLines.firstOrNull()?.depth
             Text(
-                if (vm.engineOn) "${vm.engineName}${depth?.let { " · Tiefe $it" } ?: ""}" else "Analyse (${vm.engineLabel})",
+                "${vm.engineName}${depth?.let { " · Tiefe $it" } ?: ""}",
                 Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (vm.engineOn) {
-                TextButton({ vm.changeMultiPv(vm.multiPv - 1) }, enabled = vm.multiPv > 1) { Text("−") }
-                Text("${vm.multiPv}")
-                TextButton({ vm.changeMultiPv(vm.multiPv + 1) }, enabled = vm.multiPv < 5) { Text("+") }
-            }
+            TextButton({ vm.changeMultiPv(vm.multiPv - 1) }, enabled = vm.multiPv > 1) { Text("−") }
+            Text("${vm.multiPv}")
+            TextButton({ vm.changeMultiPv(vm.multiPv + 1) }, enabled = vm.multiPv < 5) { Text("+") }
         }
-        if (vm.engineOn) {
-            for (l in vm.engineLines.take(vm.multiPv)) {
-                Row(
-                    Modifier.fillMaxWidth().combinedClickable(onClick = { l.pv.firstOrNull()?.let { vm.playUci(it) } })
-                        .padding(vertical = 2.dp),
-                ) {
-                    Text(l.scoreText(), Modifier.width(56.dp), fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium)
-                    Text(vm.pvToSan(l.pv), maxLines = 2, overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyMedium)
-                }
+        // feste Zeilenzahl, damit das Brett darunter nicht springt
+        for (i in 0 until vm.multiPv) {
+            val l = vm.engineLines.getOrNull(i)
+            Row(
+                Modifier.fillMaxWidth()
+                    .combinedClickable(onClick = { l?.pv?.firstOrNull()?.let { vm.playUci(it) } })
+                    .padding(vertical = 2.dp),
+            ) {
+                Text(l?.scoreText() ?: "", Modifier.width(56.dp), fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium)
+                Text(l?.let { vm.pvToSan(it.pv) } ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

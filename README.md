@@ -24,7 +24,8 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur antippen, dann das Zielfeld antippen. Weicht der Zug von der Partie ab, entsteht eine Variante.
    - Ein Zug in der Zugliste springt zu dieser Stellung.
-   - Schalter **Analyse** startet die gewählte Engine. Ein Antippen einer Engine-Variante spielt deren ersten Zug.
+   - **Analyse** im Menü (⋮) startet die gewählte Engine. Ihre Varianten stehen über dem Brett (im Querformat
+     daneben); ein Antippen einer Variante spielt deren ersten Zug.
    - Menü: Partiedaten, Kommentar, Variante hochstufen oder löschen, PGN/FEN kopieren, PGN einfügen.
    - **Speichern**: in die geöffnete Scid-5-Datenbank (ersetzen oder neu) oder in eine andere bzw. neue Scid-5-Datenbank im Ordner.
 
