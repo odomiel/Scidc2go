@@ -163,6 +163,9 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
     val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
         vm.openDocuments(uris)
     }
+    val pickSiblingFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+        vm.openFromFolder(uri)
+    }
     var newDbDialog by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
 
@@ -188,7 +191,7 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
             if (vm.folderUri == null) {
                 Column(Modifier.padding(24.dp)) {
                     Text("Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN). " +
-                        "Oder öffne einzelne Dateien; bei Scid alle drei Dateien gemeinsam auswählen.")
+                        "Oder öffne einzelne Dateien.")
                     Spacer(Modifier.height(12.dp))
                     Button({ pickFolder.launch(null) }) { Text("Ordner wählen") }
                 }
@@ -222,6 +225,24 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
         }
     }
     if (about) AboutDialog { about = false }
+    vm.siblingRequest?.let { e ->
+        AlertDialog(
+            onDismissRequest = { vm.cancelSiblingRequest() },
+            title = { Text(e.baseName) },
+            text = {
+                Text(
+                    "Eine ${e.format.label}-Datenbank besteht aus " +
+                        e.format.exts.joinToString(", ") { "${e.baseName}.$it" } +
+                        ". Damit die App alle Dateien lesen kann, bestätige im nächsten Schritt den Ordner " +
+                        "(„Diesen Ordner verwenden“). Er erscheint dann in der Liste, jede Datenbank als ein Eintrag.",
+                )
+            },
+            confirmButton = {
+                TextButton({ pickSiblingFolder.launch(e.files.values.first()) }) { Text("Weiter") }
+            },
+            dismissButton = { TextButton({ vm.cancelSiblingRequest() }) { Text("Abbrechen") } },
+        )
+    }
 }
 
 private fun formatSize(b: Long): String = when {
