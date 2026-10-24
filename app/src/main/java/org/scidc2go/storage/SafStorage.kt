@@ -21,6 +21,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
+import android.provider.OpenableColumns
 import org.scidc2go.db.ChessDatabase
 import org.scidc2go.db.DbFileSet
 import org.scidc2go.db.PgnDatabase
@@ -59,10 +60,13 @@ private fun openChannel(ctx: Context, uri: Uri, write: Boolean): FileChannel {
     }
 }
 
-/** Dateien einer Datenbank in einem per SAF freigegebenen Ordner. */
+/**
+ * Dateien einer Datenbank in einem per SAF freigegebenen Ordner.
+ * Ohne [treeUri] (einzeln ausgewählte Dateien) können keine neuen Dateien angelegt werden.
+ */
 class SafFileSet(
     private val ctx: Context,
-    private val treeUri: Uri,
+    private val treeUri: Uri?,
     override val baseName: String,
     files: Map<String, Uri>,
 ) : DbFileSet {
@@ -81,6 +85,7 @@ class SafFileSet(
     }
 
     private fun createFile(ext: String): Uri {
+        val treeUri = treeUri ?: throw IOException("$baseName.$ext fehlt")
         val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
         val uri = DocumentsContract.createDocument(ctx.contentResolver, parent, "application/octet-stream", "$baseName.$ext")
             ?: throw IOException("Kann $baseName.$ext nicht anlegen")
@@ -95,10 +100,7 @@ object SafStorage {
     fun listDatabases(ctx: Context, treeUri: Uri): List<DbEntry> {
         val docId = DocumentsContract.getTreeDocumentId(treeUri)
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
-        val byBase = HashMap<Pair<String, DbFormat>, MutableMap<String, Uri>>()
-        val sizes = HashMap<Pair<String, DbFormat>, Long>()
-        val extToFormat = HashMap<String, DbFormat>()
-        for (f in DbFormat.entries) for (e in f.exts) extToFormat[e] = f
+        val docs = ArrayList<Triple<String, Long, Uri>>()
         ctx.contentResolver.query(
             childrenUri,
             arrayOf(
@@ -109,24 +111,48 @@ object SafStorage {
             null, null, null,
         )?.use { c ->
             while (c.moveToNext()) {
-                val id = c.getString(0)
                 val name = c.getString(1) ?: continue
                 val size = if (c.isNull(2)) 0L else c.getLong(2)
-                val dot = name.lastIndexOf('.')
-                if (dot <= 0) continue
-                val ext = name.substring(dot + 1).lowercase()
-                val format = extToFormat[ext] ?: continue
-                val key = name.substring(0, dot) to format
-                byBase.getOrPut(key) { HashMap() }[ext] = DocumentsContract.buildDocumentUriUsingTree(treeUri, id)
-                sizes[key] = (sizes[key] ?: 0L) + size
+                docs.add(Triple(name, size, DocumentsContract.buildDocumentUriUsingTree(treeUri, c.getString(0))))
             }
         }
+        return group(docs).filter { it.complete }
+    }
+
+    /** Fasst einzeln ausgewählte Dokumente zu Datenbanken zusammen (auch unvollständige). */
+    fun groupDocuments(ctx: Context, uris: List<Uri>): List<DbEntry> {
+        val docs = uris.mapNotNull { uri ->
+            ctx.contentResolver.query(
+                uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null,
+            )?.use { c ->
+                if (!c.moveToFirst()) return@use null
+                val name = c.getString(0) ?: return@use null
+                Triple(name, if (c.isNull(1)) 0L else c.getLong(1), uri)
+            }
+        }
+        return group(docs)
+    }
+
+    /** Gruppiert (Name, Größe, URI) nach Basisname und Format. */
+    private fun group(docs: List<Triple<String, Long, Uri>>): List<DbEntry> {
+        val extToFormat = HashMap<String, DbFormat>()
+        for (f in DbFormat.entries) for (e in f.exts) extToFormat[e] = f
+        val byBase = HashMap<Pair<String, DbFormat>, MutableMap<String, Uri>>()
+        val sizes = HashMap<Pair<String, DbFormat>, Long>()
+        for ((name, size, uri) in docs) {
+            val dot = name.lastIndexOf('.')
+            if (dot <= 0) continue
+            val ext = name.substring(dot + 1).lowercase()
+            val format = extToFormat[ext] ?: continue
+            val key = name.substring(0, dot) to format
+            byBase.getOrPut(key) { HashMap() }[ext] = uri
+            sizes[key] = (sizes[key] ?: 0L) + size
+        }
         return byBase.map { (k, files) -> DbEntry(k.first, k.second, files, sizes[k] ?: 0L) }
-            .filter { it.complete }
             .sortedWith(compareBy({ it.baseName.lowercase() }, { it.format.ordinal }))
     }
 
-    fun open(ctx: Context, treeUri: Uri, entry: DbEntry, writable: Boolean, progress: (Float) -> Unit): ChessDatabase {
+    fun open(ctx: Context, treeUri: Uri?, entry: DbEntry, writable: Boolean, progress: (Float) -> Unit): ChessDatabase {
         val fs = SafFileSet(ctx, treeUri, entry.baseName, entry.files)
         return when (entry.format) {
             DbFormat.SCID5 -> Scid5Database.open(fs, writable)

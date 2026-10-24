@@ -168,6 +168,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Öffnet einzeln ausgewählte Dateien. Bei Scid und Scidb müssen alle Dateien
+     * der Datenbank gemeinsam ausgewählt werden (z.B. .si4, .sg4 und .sn4).
+     */
+    fun openDocuments(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        runBusy("Öffne …") {
+            val entries = withContext(Dispatchers.IO) { SafStorage.groupDocuments(ctx, uris) }
+            val entry = entries.firstOrNull { it.complete }
+            if (entry == null) {
+                val e = entries.firstOrNull()
+                message = if (e == null) {
+                    "Kein bekanntes Datenbankformat"
+                } else {
+                    "Bitte alle Dateien gemeinsam auswählen: " + e.format.exts.joinToString(", ") { "${e.baseName}.$it" }
+                }
+                return@runBusy
+            }
+            val newDb = withContext(Dispatchers.IO) {
+                SafStorage.open(ctx, null, entry, writable = entry.format == DbFormat.SCID5) { p ->
+                    busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
+                }
+            }
+            setDatabase(newDb, null)
+        }
+    }
+
     private fun queryName(uri: Uri): String? =
         ctx.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
             if (it.moveToFirst()) it.getString(0) else null

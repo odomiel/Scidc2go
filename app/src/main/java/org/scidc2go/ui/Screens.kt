@@ -160,8 +160,8 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
     val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
         uri?.let { vm.setFolder(it) }
     }
-    val pickPgn = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        uri?.let { vm.openPgnUri(it) }
+    val pickFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
+        vm.openDocuments(uris)
     }
     var newDbDialog by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
@@ -181,13 +181,14 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton({ pickPgn.launch(arrayOf("*/*")) }) { Text("PGN öffnen") }
+                FilledTonalButton({ pickFiles.launch(arrayOf("*/*")) }) { Text("Dateien öffnen") }
                 FilledTonalButton({ vm.newGame(); vm.screen = Screen.BOARD }) { Text("Brett") }
                 FilledTonalButton({ newDbDialog = true }, enabled = vm.folderUri != null) { Text("Neue Scid-5-DB") }
             }
             if (vm.folderUri == null) {
                 Column(Modifier.padding(24.dp)) {
-                    Text("Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN).")
+                    Text("Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN). " +
+                        "Oder öffne einzelne Dateien; bei Scid alle drei Dateien gemeinsam auswählen.")
                     Spacer(Modifier.height(12.dp))
                     Button({ pickFolder.launch(null) }) { Text("Ordner wählen") }
                 }
