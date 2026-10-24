@@ -282,9 +282,11 @@ fun NameDialog(title: String, label: String, initial: String = "", onDismiss: ()
 
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val version = remember { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Scidc2go") },
+        title = { Text("Scidc2go $version") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("Schachdatenbanken unterwegs: lesen von Scid 3/4/5, Scidb und PGN, schreiben von Scid 5.")
