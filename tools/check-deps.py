@@ -49,6 +49,8 @@ def maven_deps():
     plugins = {
         "com.android.application": ("com.android.tools.build", "gradle"),
         "org.jetbrains.kotlin.android": ("org.jetbrains.kotlin", "kotlin-gradle-plugin"),
+        # hat immer die Kotlin-Version; mit AGP 9 ist Kotlin eingebaut und nur noch hier angegeben
+        "org.jetbrains.kotlin.plugin.compose": ("org.jetbrains.kotlin", "kotlin-gradle-plugin"),
     }
     for pid, version in re.findall(r'id\("([^"]+)"\) version "([^"]+)"', top):
         if pid in plugins:

@@ -14,6 +14,7 @@ import org.scidc2go.db.Scid4Database
 import org.scidc2go.db.Scid5Database
 import java.io.File
 import java.io.RandomAccessFile
+import kotlin.io.path.createTempDirectory
 import kotlin.random.Random
 
 class ScidTest {
@@ -89,7 +90,7 @@ class ScidTest {
     }
 
     @Test fun writeScid5Roundtrip() {
-        val outDir = System.getenv("SCIDC2GO_OUT")?.let { File(it) } ?: createTempDir()
+        val outDir = System.getenv("SCIDC2GO_OUT")?.let { File(it) } ?: createTempDirectory().toFile()
         outDir.mkdirs()
         listOf("si5", "sg5", "sn5").forEach { File(outDir, "rt.$it").delete() }
         val rnd = Random(42)

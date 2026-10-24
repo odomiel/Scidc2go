@@ -8,6 +8,7 @@ import org.scidc2go.db.ScidbDatabase
 import org.scidc2go.db.ScidbGameDecoder
 import java.io.File
 import java.io.ByteArrayOutputStream
+import kotlin.io.path.createTempDirectory
 
 /**
  * Partiedatensatz von Hand nach den Regeln von Scidbs sci_encoder.cpp aufgebaut
@@ -30,7 +31,7 @@ class ScidbTest {
     }
 
     @Test fun readDatabase() {
-        val dir = createTempDir()
+        val dir = createTempDirectory().toFile()
         // Index
         val sci = ByteArrayOutputStream()
         sci.write("Scidb.i".toByteArray()); sci.write(0)
