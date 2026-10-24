@@ -9,3 +9,6 @@ dist/
 .kotlin/
 # Erzeugt von tools/build-stockfish.sh
 app/src/main/jniLibs/
+
+# Lokale Hinweise für Claude Code (enthält persönliche Pfade)
+CLAUDE.md
