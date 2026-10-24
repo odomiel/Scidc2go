@@ -41,6 +41,7 @@ Benötigt: JDK 17, Android SDK (Plattform 35) und für Stockfish das Android NDK
 
 ```sh
 tools/build-stockfish.sh        # Stockfish für arm64-v8a, armeabi-v7a, x86_64; trägt das NNUE-Netz in StockfishNet.kt ein
+tools/build-apk.sh              # aktuelle APK bauen (mit Tests) und nach dist/ kopieren; --debug, --no-tests
 ./gradlew assembleRelease       # APK: app/build/outputs/apk/release/
 ./gradlew testDebugUnitTest     # Unit-Tests
 tools/check-deps.py             # neuere Versionen und bekannte Sicherheitslücken der Abhängigkeiten
