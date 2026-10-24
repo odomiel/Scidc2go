@@ -1,0 +1,47 @@
+[Event "Test Ü"]
+[Site "Bärlin"]
+[Date "2024.05.17"]
+[Round "3.1"]
+[White "Müller, Hans"]
+[Black "Smith, John"]
+[Result "1-0"]
+[WhiteElo "2310"]
+[BlackElo "2205"]
+[ECO "C65"]
+[Annotator "Tester"]
+[Opening "Spanisch"]
+[TimeControl "40/7200"]
+
+{Vor der Partie} 1.e4 e5 2.Nf3 {Springer} 2...Nc6 (2...d6 {Philidor} 3.d4 (3.Bc4
+Be7) 3...exd4 $6) (2...Nf6 $5 3.Nxe5) 3.Bb5 a6 $1 4.Ba4 Nf6 5.O-O Be7 6.Re1 b5
+7.Bb3 d6 8.c3 O-O 9.h3 Na5 10.Bc2 c5 11.d4 Qc7 12.Nbd2 cxd4 13.cxd4 Nc6 14.Nb3
+a5 15.Be3 a4 16.Nbd2 Bd7 17.Rc1 Qb7 18.Qe2 Rfe8 19.Bd3 exd4 20.Nxd4 Nxd4 21.Bxd4
+Bd8 22.Qf3 Bb6 23.Bxb6 Qxb6 24.Rc6 Qb7 25.Rxd6 Bxh3 26.Qg3 Bd7 27.e5 Nh5 28.Qh4
+g6 29.Bxb5 Bxb5 30.Rd7 {Gewinnt}
+1-0
+
+[Event "Promo"]
+[Site "?"]
+[Date "2020.??.??"]
+[Round "?"]
+[White "A"]
+[Black "B"]
+[Result "0-1"]
+[SetUp "1"]
+[FEN "8/P1k5/8/8/8/8/5Kp1/8 w - - 0 1"]
+
+1.a8=N+ Kb7 (1...Kb8 2.Nb6 g1=Q+) 2.Ke2 g1=R 3.Nc7 Kxc7 4.Kd2 Rg2+ 5.Kc3 Rb2
+6.Kc4
+0-1
+
+[Event "EP"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "C"]
+[Black "D"]
+[Result "*"]
+
+1.e4 d5 2.e5 f5 3.exf6 Qd6 4.fxg7
+*
+
