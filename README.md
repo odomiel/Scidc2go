@@ -43,7 +43,11 @@ Benötigt: JDK 17, Android SDK (Plattform 35) und für Stockfish das Android NDK
 tools/build-stockfish.sh        # Stockfish für arm64-v8a, armeabi-v7a, x86_64; trägt das NNUE-Netz in StockfishNet.kt ein
 ./gradlew assembleRelease       # APK: app/build/outputs/apk/release/
 ./gradlew testDebugUnitTest     # Unit-Tests
+tools/check-deps.py             # neuere Versionen und bekannte Sicherheitslücken der Abhängigkeiten
 ```
+
+Vor dem ersten Release eines Tages werden mit `tools/check-deps.py` die externen Abhängigkeiten geprüft
+(Gradle-Plugins, Bibliotheken, Gradle-Wrapper, Stockfish; Sicherheitslücken über die OSV-Datenbank).
 
 Für signierte Release-Builds legt man eine `keystore.properties` an. Sie gehört nicht ins Repository:
 
