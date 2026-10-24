@@ -18,7 +18,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.random.Random
 
 class ScidTest {
-    private val resDir = File(javaClass.getResource("/s5.si5")!!.toURI()).parentFile
+    private val resDir = File(javaClass.getResource("/s5.si5")!!.toURI()).parentFile!!
 
     /** Zugtext ohne Zugnummern und Formatierung, zum Vergleich mit Scids Export. */
     private fun movetext(pgn: String): String {

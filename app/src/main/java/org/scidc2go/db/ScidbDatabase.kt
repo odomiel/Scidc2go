@@ -104,10 +104,10 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
                 else -> throw IOException("Defekte Scidb-Namensdatei")
             }
         }
-        players = pl!!.first; playerLookup = pl!!.second
-        sites = si!!.first; siteLookup = si!!.second
-        events = ev!!.first; eventLookup = ev!!.second; eventSite = ev!!.third
-        annotators = an!!.first; annotatorLookup = an!!.second
+        players = pl!!.first; playerLookup = pl.second
+        sites = si!!.first; siteLookup = si.second
+        events = ev!!.first; eventLookup = ev.second; eventSite = ev.third
+        annotators = an!!.first; annotatorLookup = an.second
 
         val g = files.openRead("scg")
         val magic = g.readFully(0, 10)

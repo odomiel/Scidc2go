@@ -35,7 +35,7 @@ class Node(val move: Move?, val parent: Node?, val pos: Position, val san: Strin
     val ply: Int get() {
         var n = 0
         var p = this
-        while (p.parent != null) { n++; p = p.parent!! }
+        while (p.parent != null) { n++; p = p.parent }
         return n
     }
 

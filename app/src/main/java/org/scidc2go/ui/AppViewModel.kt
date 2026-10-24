@@ -389,7 +389,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Anfang der Variante, in der [n] liegt (null = Hauptvariante). */
     private fun variationStart(n: Node): Node? {
         var v = n
-        while (v.parent != null && v.parent!!.children.indexOf(v) == 0) v = v.parent!!
+        while (v.parent != null && v.parent.children.indexOf(v) == 0) v = v.parent
         return if (v.parent == null) null else v
     }
 

@@ -456,10 +456,10 @@ object ScidFormat {
                     encodeMove(v.move!!, pos, out)
                     for (nag in v.nags.take(8)) { out.write(ENCODE_NAG); out.write(nag and 0xFF); nNags++ }
                     if (v.comment.isNotEmpty()) { out.write(ENCODE_COMMENT); comments.add(v.comment); nComments++ }
-                    encodeLine(v, pos.copy().also { it.play(v.move!!) })
+                    encodeLine(v, pos.copy().also { it.play(v.move) })
                     out.write(ENCODE_END_MARKER)
                 }
-                pos = pos.copy().also { it.play(m.move!!) }
+                pos = pos.copy().also { it.play(m.move) }
                 parent = m
             }
         }
