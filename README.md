@@ -4,8 +4,7 @@ Schachdatenbanken unterwegs: eine schlanke Android-App für Smartphone und Table
 
 - **Lesen:** Scid 3 (`.si3`), Scid 4 (`.si4`), Scid 5 (`.si5`), Scidb (`.sci`, Dateiversion 94), PGN,
   außerdem gepackt wie in Scidb: Scidb-Archive (`.scv`), PGN mit gzip (`.pgn.gz`) und ZIP-Archive mit PGN-Dateien (`.zip`)
-- **Schreiben:** Scid 5, auch in einem Scidb-Archiv (`.scv`). Partien ersetzen, neu anhängen, zum Löschen markieren,
-  neue Datenbanken anlegen
+- **Schreiben:** Scid 5. Partien ersetzen, neu anhängen, zum Löschen markieren, neue Datenbanken anlegen
 - **Analyse:** Stockfish 19 ist eingebaut (NNUE, 1–5 Varianten). Das Netz (98 MB) lädt die App beim ersten
   Einschalten der Analyse einmalig von stockfishchess.org; nur dafür braucht sie die Internet-Berechtigung.
 - **Ansichten:** Datenbankliste mit Suche und Brettansicht mit Zugliste, Varianten, Kommentaren und Bewertungszeichen.
@@ -21,12 +20,10 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    eine Datei der Datenbank: Liegt sie in einem schon freigegebenen Ordner (oder einem Unterordner davon), öffnet
    die App die Datenbank direkt. Sonst fragt sie einmalig nach dem Ordner, denn Android erlaubt den Zugriff auf
    die übrigen Dateien nur mit Ordnerfreigabe. Fehlt eine Datei der Datenbank, meldet die App welche.
-   Gepackte Datenbanken (`.scv`, `.pgn.gz`, `.zip`) entpackt die App beim Öffnen in ihren Cache; beim Schließen
-   wird die entpackte Kopie gelöscht. Aus einem ZIP-Archiv werden alle PGN-Dateien hintereinander gelesen, wie in
-   Scidb. Ein Scidb-Archiv mit einer Scid-5-Datenbank darin lässt sich bearbeiten: Nach jeder Änderung schreibt die
-   App das Archiv neu (zuerst als `name.neu.scv`, dann wird das alte ersetzt). Alle anderen gepackten Datenbanken
-   sind schreibgeschützt; ein Scidb-Archiv mit z.B. Scid 4 darin lässt sich mit **In Scidb-Archiv umwandeln** in ein
-   bearbeitbares überführen.
+   Gepackte Datenbanken (`.scv`, `.pgn.gz`, `.zip`) entpackt die App beim Öffnen in ihren Cache und öffnet sie
+   schreibgeschützt; beim Schließen wird die entpackte Kopie gelöscht. Ein Scidb-Archiv darf wie in Scidb eine
+   Scidb-, Scid-3/4- oder PGN-Datenbank enthalten. Aus einem ZIP-Archiv werden alle
+   PGN-Dateien hintereinander gelesen, wie in Scidb. Zum Bearbeiten lassen sie sich in Scid 5 konvertieren.
 2. Datenbank antippen, um die Partieliste zu sehen. Das Suchfeld durchsucht Spieler, Turnier, Ort, Datum, ECO und Runde.
    Langes Drücken auf eine Partie öffnet ein Menü: Löschmarkierung setzen oder entfernen, oder die Partie
    endgültig löschen (nur Scid 5). Das Menü (⋮) der Partieliste löscht alle markierten Partien auf einmal.
@@ -37,8 +34,6 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    **In Scid 5 konvertieren** (Menü der Partieliste) schreibt eine Scid-3/4-, Scidb- oder PGN-Datenbank in eine
    neue Scid-5-Datenbank im selben Ordner; das Original bleibt unverändert. Partien, die sich nicht übernehmen
    lassen (defekt oder größer als 128 KB), werden übersprungen und gemeldet.
-   **In Scidb-Archiv umwandeln** schreibt die Datenbank ebenso als Scid 5, gepackt in ein Scidb-Archiv (`name.scv`).
-   Hinweis: Scidb selbst öffnet aus Archiven nur Scidb-, Scid-3/4- und PGN-Datenbanken, solche Archive also nicht.
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
      Weicht der Zug von der Partie ab, entsteht eine Variante.
@@ -91,9 +86,8 @@ keyPassword=…
 - Scidb: Der Leser folgt dem Scidb-Quelltext. Getestet ist er nur mit von Hand nach Scidbs Encoder-Regeln
   erzeugten Daten, nicht mit echten Scidb-Dateien. Ältere Scidb-Dateiversionen (91–93) und
   Spielvarianten (Crazyhouse, Antichess usw.) werden nicht unterstützt.
-- Archive: Scidb-Archive werden so gelesen und geschrieben wie von Scidbs `archive::unpack` und `archive::packFiles`
-  (zlib und unkomprimiert, CRC-32-Prüfsumme); getestet mit nach diesen Regeln erzeugten Archiven, nicht mit echten
-  Scidb-Archiven. gzip- und ZIP-Dateien liest die App mit den Java-Bibliotheken.
+- Archive: Scidb-Archive werden so erzeugt, wie Scidbs `archive::packFiles` sie schreibt (zlib und unkomprimiert,
+  CRC-32-Prüfsumme), gzip- und ZIP-Dateien mit den Java-Bibliotheken. Echte Scidb-Archive sind ungetestet.
 
 ## Enthaltene freie Komponenten
 

@@ -42,7 +42,6 @@ import org.scidc2go.chess.WHITE
 import org.scidc2go.chess.parseSquare
 import org.scidc2go.chess.rankOf
 import org.scidc2go.chess.typeOf
-import org.scidc2go.db.ArchiveDatabase
 import org.scidc2go.db.ChessDatabase
 import org.scidc2go.db.Scid5Database
 import org.scidc2go.engine.EngineLine
@@ -170,7 +169,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val uri = folderUri ?: return
         runBusy("Öffne ${entry.baseName} …") {
             val newDb = withContext(Dispatchers.IO) {
-                SafStorage.open(ctx, uri, entry, writable = entry.format.writable) { p ->
+                SafStorage.open(ctx, uri, entry, writable = entry.format == DbFormat.SCID5) { p ->
                     busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
                 }
             }
@@ -252,7 +251,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun openEntry(tree: Uri?, entry: DbEntry) {
         val newDb = withContext(Dispatchers.IO) {
-            SafStorage.open(ctx, tree, entry, writable = entry.format.writable) { p ->
+            SafStorage.open(ctx, tree, entry, writable = entry.format == DbFormat.SCID5) { p ->
                 busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
             }
         }
@@ -453,23 +452,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         treeVersion++
     }
 
-    /** Meldung, warum [d] schreibgeschützt ist, mit Hinweis, wie man sie bearbeitbar macht. */
-    private fun readOnlyReason(d: ChessDatabase): String = when {
-        d is ArchiveDatabase && d.archiveFormat == DbFormat.SCIDB_ARCHIVE.label ->
-            "${d.name}.scv enthält eine ${d.contentFormat.replace(' ', '-')}-Datenbank und ist nur lesbar; " +
-                "zum Bearbeiten in ein Scidb-Archiv umwandeln"
-        d is ArchiveDatabase -> "${d.name} ist gepackt und nur lesbar; zum Bearbeiten in Scid 5 konvertieren"
-        else -> "Diese Datenbank ist schreibgeschützt"
-    }
-
-    val writableTargets get() = dbEntries.filter { it.format.writable }
+    val writableTargets get() = dbEntries.filter { it.format == DbFormat.SCID5 }
     val canSaveInPlace get() = db?.writable == true
 
     /** Speichert in die geöffnete Scid-5-Datenbank (ersetzen oder anhängen). */
     fun save(asNew: Boolean = false) {
         val d = db ?: return
         val g = game ?: return
-        if (!d.writable) { message = readOnlyReason(d); return }
+        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
         runBusy("Speichere …") {
             val idx = withContext(Dispatchers.IO) {
                 if (gameIndex >= 0 && !asNew) { d.replaceGame(gameIndex, g); gameIndex } else d.addGame(g)
@@ -489,10 +479,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (entry == dbEntry && db?.writable == true) { save(asNew = true); return }
         runBusy("Speichere in ${entry.baseName} …") {
             val idx = withContext(Dispatchers.IO) {
-                SafStorage.open(ctx, uri, entry, writable = true) {}.use {
-                    if (!it.writable) throw java.io.IOException(readOnlyReason(it))
-                    it.addGame(g)
-                }
+                SafStorage.open(ctx, uri, entry, writable = true) {}.use { it.addGame(g) }
             }
             message = "In ${entry.baseName} gespeichert (Partie ${idx + 1})"
             refreshFolder()
@@ -514,7 +501,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleDeleted(index: Int) {
         val d = db ?: return
-        if (!d.writable) { message = readOnlyReason(d); return }
+        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
         runBusy("Ändere Löschmarkierung …") {
             withContext(Dispatchers.IO) { d.setDeleted(index, !d.header(index).deleted) }
             listVersion++
@@ -527,7 +514,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun requestDelete(indices: List<Int>) {
         val d = db ?: return
-        if (!d.writable) { message = readOnlyReason(d); return }
+        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
         deleteRequest = indices
     }
 
@@ -613,61 +600,48 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Offene Rückfrage zum Konvertieren: Zielformat (Scid 5 oder Scidb-Archiv) und vorgeschlagener Name. */
-    data class ConvertRequest(val format: DbFormat, val name: String)
-
-    var convertRequest by mutableStateOf<ConvertRequest?>(null)
+    /** Vorgeschlagener Name, wenn eine Rückfrage zum Konvertieren nach Scid 5 offen ist (sonst null). */
+    var convertRequest by mutableStateOf<String?>(null)
         private set
 
     /** Ziel der Konvertierung: Ordner der Datenbank, sonst der gewählte Datenbank-Ordner. */
     private fun convertTarget(): Pair<Uri, String?>? =
         dbTree?.let { it to dbEntry?.folderId } ?: folderUri?.let { it to null }
 
-    /** Lässt sich die offene Datenbank in [format] umwandeln (nicht in ihr eigenes Format)? */
-    fun canConvert(format: DbFormat): Boolean {
-        val d = db ?: return false
-        if (convertTarget() == null) return false
-        return when (format) {
-            DbFormat.SCID5 -> d !is Scid5Database
-            // ein nur lesbares Archiv lässt sich in ein bearbeitbares umwandeln
-            else -> dbEntry?.format != format || !d.writable
-        }
-    }
+    val canConvert get() = db != null && db !is Scid5Database && convertTarget() != null
 
-    fun requestConvert(format: DbFormat) {
+    fun requestConvert() {
         val d = db ?: return
         val (tree, folder) = convertTarget() ?: run {
-            message = "Bitte zuerst einen Ordner wählen, in dem die neue Datenbank entstehen soll"
+            message = "Bitte zuerst einen Ordner wählen, in dem die Scid-5-Datenbank entstehen soll"
             return
         }
         runBusy("Prüfe Namen …") {
             val base = d.name.removeSuffix(".pgn")
-            val name = withContext(Dispatchers.IO) {
+            convertRequest = withContext(Dispatchers.IO) {
                 generateSequence(1) { it + 1 }.map { if (it == 1) base else "$base-$it" }
-                    .first { !SafStorage.exists(ctx, tree, folder, it, format) }
+                    .first { !SafStorage.scid5Exists(ctx, tree, folder, it) }
             }
-            convertRequest = ConvertRequest(format, name)
         }
     }
 
     fun cancelConvert() { convertRequest = null }
 
     fun confirmConvert(name: String) {
-        val format = convertRequest?.format ?: return
         convertRequest = null
         val d = db ?: return
         val (tree, folder) = convertTarget() ?: return
-        val clean = name.trim().removeSuffix(".${format.mainExt}")
+        val clean = name.trim().removeSuffix(".si5")
         if (clean.isEmpty()) return
         runBusy("Konvertiere …") {
             val total = d.gameCount
             val failed = withContext(Dispatchers.IO) {
-                if (SafStorage.exists(ctx, tree, folder, clean, format)) throw java.io.IOException("$clean existiert bereits")
-                val progress = { n: Int -> if (n % 50 == 0 || n == total) busy = "Konvertiere nach $clean … $n / $total" }
-                if (format == DbFormat.SCID5) SafStorage.convertToScid5(ctx, tree, folder, clean, d, progress)
-                else SafStorage.convertToScidbArchive(ctx, tree, folder, clean, d, progress)
+                if (SafStorage.scid5Exists(ctx, tree, folder, clean)) throw java.io.IOException("$clean existiert bereits")
+                SafStorage.convertToScid5(ctx, tree, folder, clean, d) { n ->
+                    if (n % 50 == 0 || n == total) busy = "Konvertiere nach $clean … $n / $total"
+                }
             }
-            message = "In ${format.label} umgewandelt: $clean (${total - failed.size} Partien)" +
+            message = "In Scid 5 konvertiert: $clean (${total - failed.size} Partien)" +
                 if (failed.isNotEmpty()) ", ${failed.size} nicht übernommen (Partien ${failed.take(5).joinToString { "${it + 1}" }}" +
                     (if (failed.size > 5) " …" else "") + ")" else ""
             refreshFolder()

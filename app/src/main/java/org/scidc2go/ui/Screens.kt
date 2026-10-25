@@ -108,7 +108,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import org.scidc2go.chess.Game
 import org.scidc2go.engine.StockfishNet
 import org.scidc2go.storage.DbEntry
-import org.scidc2go.storage.DbFormat
 
 /** Dunkles Farbschema je nach Einstellung oder System. */
 @Composable
@@ -396,10 +395,8 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                             onClick = { listMenu = false; vm.requestDeleteMarked() })
                         DropdownMenuItem({ Text("Datenbank komprimieren") }, enabled = vm.canCompact,
                             onClick = { listMenu = false; vm.requestCompact() })
-                        DropdownMenuItem({ Text("In Scid 5 konvertieren") }, enabled = vm.canConvert(DbFormat.SCID5),
-                            onClick = { listMenu = false; vm.requestConvert(DbFormat.SCID5) })
-                        DropdownMenuItem({ Text("In Scidb-Archiv umwandeln") }, enabled = vm.canConvert(DbFormat.SCIDB_ARCHIVE),
-                            onClick = { listMenu = false; vm.requestConvert(DbFormat.SCIDB_ARCHIVE) })
+                        DropdownMenuItem({ Text("In Scid 5 konvertieren") }, enabled = vm.canConvert,
+                            onClick = { listMenu = false; vm.requestConvert() })
                     }
                 },
             )
@@ -476,9 +473,8 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
             }
         }
     }
-    vm.convertRequest?.let { req ->
-        val title = if (req.format == DbFormat.SCID5) "In Scid 5 konvertieren" else "In Scidb-Archiv umwandeln"
-        NameDialog(title, "Name der neuen Datenbank", req.name,
+    vm.convertRequest?.let { suggested ->
+        NameDialog("In Scid 5 konvertieren", "Name der neuen Datenbank", suggested,
             onDismiss = { vm.cancelConvert() }) { vm.confirmConvert(it) }
     }
     vm.compactRequest?.let { marked ->
@@ -769,12 +765,10 @@ private fun SaveDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     TextButton({ onDismiss(); vm.save(asNew = true) }) { Text("Als neue Partie in ${vm.db?.name}") }
                     HorizontalDivider()
                 }
-                Text("In Datenbank:", Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
+                Text("In Scid-5-Datenbank:", Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
                 if (vm.folderUri == null) Text("Kein Ordner gewählt.")
                 for (e: DbEntry in vm.writableTargets) {
-                    TextButton({ onDismiss(); vm.saveTo(e) }) {
-                        Text(if (e.format == DbFormat.SCID5) e.baseName else "${e.baseName} (${e.format.label})")
-                    }
+                    TextButton({ onDismiss(); vm.saveTo(e) }) { Text(e.baseName) }
                 }
                 if (vm.folderUri != null) {
                     TextButton({ newName = "" }) {
