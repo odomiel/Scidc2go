@@ -470,6 +470,12 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                     }
                     IconButton({ listMenu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.menu)) }
                     DropdownMenu(listMenu, { listMenu = false }) {
+                        DropdownMenuItem({ Text(stringResource(R.string.new_game)) }, onClick = {
+                            listMenu = false
+                            vm.newGame()
+                            vm.screen = Screen.BOARD
+                        })
+                        HorizontalDivider()
                         DropdownMenuItem({ Text(stringResource(R.string.delete_marked)) }, enabled = db.writable,
                             onClick = { listMenu = false; vm.requestDeleteMarked() })
                         DropdownMenuItem({ Text(stringResource(R.string.compact_db)) }, enabled = vm.canCompact,

@@ -48,6 +48,8 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    andere App weiter, etwa Mail oder Nextcloud: PGN und Archive als Datei, Scid und Scidb als `.sc7`.
    Die genaue Beschreibung des Formats für andere Programme steht in
    [docs/sc7.md](docs/sc7.md).
+   **Neue Partie** im Menü der Partieliste öffnet ein leeres Brett; **Speichern** hängt die Partie dann an die
+   geöffnete Scid-5-Datenbank an (oder legt sie in einer anderen ab).
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
      Weicht der Zug von der Partie ab, entsteht eine Variante.

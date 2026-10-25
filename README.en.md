@@ -48,6 +48,8 @@ Free software under the GNU GPL version 3 or later (see `COPYING`), with no prop
    app, such as mail or Nextcloud: PGN and archives as a file, Scid and Scidb as `.sc7`.
    The detailed description of the format for other programs is in
    [docs/sc7.en.md](docs/sc7.en.md).
+   **New game** in the game list menu opens an empty board; **Save** then appends the game to the open Scid 5
+   database (or stores it in another one).
 3. Tap a game to open the board view.
    - Entering moves: drag a piece to its target square (or tap the piece and then the target square).
      If the move differs from the game, a variation is created.
