@@ -26,6 +26,9 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    `.sg5`-Datei. **Datenbank komprimieren** (ebenfalls im Menü) entfernt die markierten Partien, ungenutzten
    Platz und nicht mehr verwendete Namen. Dabei entsteht zuerst eine vollständige Kopie (`name.neu`); erst
    danach wird das Original ersetzt, so dass bei einem Abbruch immer eine vollständige Datenbank übrig bleibt.
+   **In Scid 5 konvertieren** (Menü der Partieliste) schreibt eine Scid-3/4-, Scidb- oder PGN-Datenbank in eine
+   neue Scid-5-Datenbank im selben Ordner; das Original bleibt unverändert. Partien, die sich nicht übernehmen
+   lassen (defekt oder größer als 128 KB), werden übersprungen und gemeldet.
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
      Weicht der Zug von der Partie ab, entsteht eine Variante.

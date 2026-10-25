@@ -388,15 +388,15 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                     IconButton({ vm.closeDatabase() }) { Icon(Icons.Default.Close, "Schließen") }
                 },
                 actions = {
-                    if (db.writable) {
-                        var listMenu by remember { mutableStateOf(false) }
-                        IconButton({ listMenu = true }) { Icon(Icons.Default.MoreVert, "Menü") }
-                        DropdownMenu(listMenu, { listMenu = false }) {
-                            DropdownMenuItem({ Text("Markierte Partien löschen") },
-                                onClick = { listMenu = false; vm.requestDeleteMarked() })
-                            DropdownMenuItem({ Text("Datenbank komprimieren") }, enabled = vm.canCompact,
-                                onClick = { listMenu = false; vm.requestCompact() })
-                        }
+                    var listMenu by remember { mutableStateOf(false) }
+                    IconButton({ listMenu = true }) { Icon(Icons.Default.MoreVert, "Menü") }
+                    DropdownMenu(listMenu, { listMenu = false }) {
+                        DropdownMenuItem({ Text("Markierte Partien löschen") }, enabled = db.writable,
+                            onClick = { listMenu = false; vm.requestDeleteMarked() })
+                        DropdownMenuItem({ Text("Datenbank komprimieren") }, enabled = vm.canCompact,
+                            onClick = { listMenu = false; vm.requestCompact() })
+                        DropdownMenuItem({ Text("In Scid 5 konvertieren") }, enabled = vm.canConvert,
+                            onClick = { listMenu = false; vm.requestConvert() })
                     }
                 },
             )
@@ -472,6 +472,10 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                 }
             }
         }
+    }
+    vm.convertRequest?.let { suggested ->
+        NameDialog("In Scid 5 konvertieren", "Name der neuen Datenbank", suggested,
+            onDismiss = { vm.cancelConvert() }) { vm.confirmConvert(it) }
     }
     vm.compactRequest?.let { marked ->
         AlertDialog(

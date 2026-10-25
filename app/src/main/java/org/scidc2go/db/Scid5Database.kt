@@ -203,7 +203,7 @@ class Scid5Database private constructor(
     private fun store(game: Game): ScidIndexEntry {
         val enc = ScidFormat.encodeGame(game)
         val data = enc.data
-        if (data.size >= BLOCK) throw IOException("Partie zu groß für das Scid-5-Format")
+        if (data.size >= BLOCK) throw GameTooLargeException()
         val ie = enc.entry
         ie.event = nameId(NAME_EVENT, enc.names[0])
         ie.site = nameId(NAME_SITE, enc.names[1])
@@ -233,7 +233,11 @@ class Scid5Database private constructor(
         System.arraycopy(buf, 0, index, i * ENTRY_SIZE, ENTRY_SIZE)
     }
 
+    /** Bei false wird nicht nach jeder Änderung auf den Speicher geschrieben, sondern erst beim Schließen. */
+    private var syncEachWrite = true
+
     private fun sync() {
+        if (!syncEachWrite) return
         gameWrite?.force(false)
         namesWrite?.force(false)
         indexWrite?.force(false)
@@ -347,6 +351,8 @@ class Scid5Database private constructor(
     }
 
     override fun close() {
+        syncEachWrite = true
+        sync()
         gameRead.close()
         gameWrite?.close()
         indexWrite?.close()
@@ -358,6 +364,38 @@ class Scid5Database private constructor(
         private const val BLOCK = 1L shl 17
 
         val EXTS = listOf("si5", "sg5", "sn5")
+
+        /**
+         * Schreibt alle Partien aus [src] in die neue Scid-5-Datenbank [target] (deren Dateien dürfen noch nicht
+         * existieren); Löschmarkierungen werden übernommen. Die Datenbank entsteht zuerst als „name.neu“ und wird
+         * erst am Ende umbenannt. [progress] erhält die Zahl der bearbeiteten Partien. Liefert die Indizes der
+         * Partien, die sich nicht übernehmen ließen (z.B. zu groß für das Format).
+         */
+        fun convert(src: ChessDatabase, target: DbFileSet, progress: (Int) -> Unit = {}): List<Int> {
+            if (EXTS.any { target.exists(it) }) throw IOException("${target.baseName} existiert bereits")
+            val tmp = target.sibling("${target.baseName}.neu")
+            tmp.delete(EXTS)
+            val failed = ArrayList<Int>()
+            create(tmp).use { db ->
+                db.syncEachWrite = false
+                for (i in 0 until src.gameCount) {
+                    progress(i)
+                    // defekte Partien der Quelle und nicht darstellbare überspringen, Schreibfehler abbrechen
+                    val game = try { src.loadGame(i) } catch (e: Exception) { failed.add(i); continue }
+                    val idx = try {
+                        db.addGame(game)
+                    } catch (e: GameTooLargeException) {
+                        failed.add(i); continue
+                    } catch (e: RuntimeException) {
+                        failed.add(i); continue
+                    }
+                    if (src.header(i).deleted) db.setDeleted(idx, true)
+                }
+                progress(src.gameCount)
+            }
+            tmp.rename(target.baseName, EXTS)
+            return failed
+        }
 
         fun open(files: DbFileSet, writable: Boolean) = Scid5Database(files, writable)
 
@@ -390,3 +428,6 @@ class Scid5Database private constructor(
         }
     }
 }
+
+/** Die Partie überschreitet die Größengrenze des Scid-5-Formats (128 KB). */
+class GameTooLargeException : IOException("Partie zu groß für das Scid-5-Format")

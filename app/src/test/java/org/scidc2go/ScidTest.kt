@@ -148,6 +148,37 @@ class ScidTest {
         assertEquals(0L, File(dir, "del.si5").length())
     }
 
+    @Test fun convertToScid5() {
+        val dir = createTempDirectory().toFile()
+        // Scid 4 → Scid 5: muss wieder Scids eigenem PGN-Export entsprechen
+        Scid4Database(JavaFileSet(resDir, "s4")).use { src ->
+            assertEquals(emptyList<Int>(), Scid5Database.convert(src, JavaFileSet(dir, "aus4")))
+        }
+        Scid5Database.open(JavaFileSet(dir, "aus4"), false).use { compareWithReference(it) }
+        // PGN → Scid 5
+        val pgn = PgnDatabase("sample", RandomAccessFile(File(resDir, "sample.pgn"), "r").channel)
+        val expected = games(pgn)
+        var last = -1
+        pgn.use { assertEquals(emptyList<Int>(), Scid5Database.convert(it, JavaFileSet(dir, "auspgn")) { n -> last = n }) }
+        assertEquals(expected.size, last)
+        Scid5Database.open(JavaFileSet(dir, "auspgn"), false).use { re ->
+            assertEquals(expected.size, re.gameCount)
+            for (i in expected.indices) assertEquals(Pgn.write(expected[i]), Pgn.write(re.loadGame(i)))
+        }
+        // Löschmarkierungen bleiben erhalten, ein vorhandener Name wird abgelehnt
+        Scid5Database.open(JavaFileSet(dir, "aus4"), true).use { it.setDeleted(1, true) }
+        Scid5Database.open(JavaFileSet(dir, "aus4"), false).use { Scid5Database.convert(it, JavaFileSet(dir, "kopie")) }
+        Scid5Database.open(JavaFileSet(dir, "kopie"), false).use { re ->
+            assertEquals(listOf(false, true, false), (0 until re.gameCount).map { re.header(it).deleted })
+        }
+        val err = runCatching {
+            Scid5Database.open(JavaFileSet(dir, "aus4"), false).use { Scid5Database.convert(it, JavaFileSet(dir, "kopie")) }
+        }.exceptionOrNull()
+        assertTrue(err is java.io.IOException)
+        assertEquals(setOf("aus4", "auspgn", "kopie"), dir.list()!!.map { it.substringBefore('.') }.toSet())
+        assertEquals(9, dir.list()!!.size)
+    }
+
     @Test fun compactScid5() {
         val dir = createTempDirectory().toFile()
         val rnd = Random(11)

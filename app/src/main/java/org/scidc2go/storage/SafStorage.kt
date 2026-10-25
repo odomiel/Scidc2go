@@ -248,6 +248,19 @@ object SafStorage {
         return removed to fresh
     }
 
+    /** Gibt es im Ordner [folderId] (null = oberster Ordner) schon Dateien der Scid-5-Datenbank [baseName]? */
+    fun scid5Exists(ctx: Context, treeUri: Uri, folderId: String?, baseName: String): Boolean =
+        listDatabases(ctx, treeUri, folderId ?: DocumentsContract.getTreeDocumentId(treeUri))
+            .any { it.baseName == baseName && it.format == DbFormat.SCID5 }
+
+    /**
+     * Konvertiert [src] in die neue Scid-5-Datenbank [baseName] im Ordner [folderId] (siehe [Scid5Database.convert]).
+     * Liefert die Indizes der nicht übernommenen Partien.
+     */
+    fun convertToScid5(
+        ctx: Context, treeUri: Uri, folderId: String?, baseName: String, src: ChessDatabase, progress: (Int) -> Unit,
+    ): List<Int> = Scid5Database.convert(src, SafFileSet(ctx, treeUri, folderId, "", emptyMap()).sibling(baseName), progress)
+
     /** Öffnet eine einzelne PGN-Datei (z.B. aus "Öffnen mit"). */
     fun openPgn(ctx: Context, uri: Uri, name: String, progress: (Float) -> Unit): ChessDatabase =
         PgnDatabase(name, openChannel(ctx, uri, false), progress)

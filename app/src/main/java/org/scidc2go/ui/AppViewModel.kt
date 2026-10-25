@@ -43,6 +43,7 @@ import org.scidc2go.chess.parseSquare
 import org.scidc2go.chess.rankOf
 import org.scidc2go.chess.typeOf
 import org.scidc2go.db.ChessDatabase
+import org.scidc2go.db.Scid5Database
 import org.scidc2go.engine.EngineLine
 import org.scidc2go.engine.OexEngine
 import org.scidc2go.engine.OexEngines
@@ -594,6 +595,54 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             message = "Komprimiert: ${formatBytes(before)} → ${formatBytes(fresh.size)}" +
                 if (removed.isNotEmpty()) ", ${removed.size} markierte Partie(n) entfernt" else ""
             search(filterText)
+            refreshFolder()
+        }
+    }
+
+    /** Vorgeschlagener Name, wenn eine Rückfrage zum Konvertieren nach Scid 5 offen ist (sonst null). */
+    var convertRequest by mutableStateOf<String?>(null)
+        private set
+
+    /** Ziel der Konvertierung: Ordner der Datenbank, sonst der gewählte Datenbank-Ordner. */
+    private fun convertTarget(): Pair<Uri, String?>? =
+        dbTree?.let { it to dbEntry?.folderId } ?: folderUri?.let { it to null }
+
+    val canConvert get() = db != null && db !is Scid5Database && convertTarget() != null
+
+    fun requestConvert() {
+        val d = db ?: return
+        val (tree, folder) = convertTarget() ?: run {
+            message = "Bitte zuerst einen Ordner wählen, in dem die Scid-5-Datenbank entstehen soll"
+            return
+        }
+        runBusy("Prüfe Namen …") {
+            val base = d.name.removeSuffix(".pgn")
+            convertRequest = withContext(Dispatchers.IO) {
+                generateSequence(1) { it + 1 }.map { if (it == 1) base else "$base-$it" }
+                    .first { !SafStorage.scid5Exists(ctx, tree, folder, it) }
+            }
+        }
+    }
+
+    fun cancelConvert() { convertRequest = null }
+
+    fun confirmConvert(name: String) {
+        convertRequest = null
+        val d = db ?: return
+        val (tree, folder) = convertTarget() ?: return
+        val clean = name.trim().removeSuffix(".si5")
+        if (clean.isEmpty()) return
+        runBusy("Konvertiere …") {
+            val total = d.gameCount
+            val failed = withContext(Dispatchers.IO) {
+                if (SafStorage.scid5Exists(ctx, tree, folder, clean)) throw java.io.IOException("$clean existiert bereits")
+                SafStorage.convertToScid5(ctx, tree, folder, clean, d) { n ->
+                    if (n % 50 == 0 || n == total) busy = "Konvertiere nach $clean … $n / $total"
+                }
+            }
+            message = "In Scid 5 konvertiert: $clean (${total - failed.size} Partien)" +
+                if (failed.isNotEmpty()) ", ${failed.size} nicht übernommen (Partien ${failed.take(5).joinToString { "${it + 1}" }}" +
+                    (if (failed.size > 5) " …" else "") + ")" else ""
             refreshFolder()
         }
     }
