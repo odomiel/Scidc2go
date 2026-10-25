@@ -42,7 +42,7 @@ import java.util.zip.ZipInputStream
 
 /**
  * Gepackte Datenbanken, wie Scidb sie kennt: Scidb-Archive (`.scv`), gzip-PGN (`.pgn.gz`) und
- * ZIP-Archive mit PGN-Dateien (`.zip`), außerdem 7z-Archive mit einer Datenbank (`name.si5.7z` usw.).
+ * ZIP-Archive mit PGN-Dateien (`.zip`), außerdem 7z-Archive mit einer Datenbank (`.sc7`, eigenes Format von Scidc2go).
  * Sie werden in ein Arbeitsverzeichnis entpackt und von dort schreibgeschützt geöffnet.
  */
 object Archives {
@@ -213,15 +213,25 @@ object Archives {
         throw LocalizedIOException(Text(R.string.err_7z, e.message ?: e.javaClass.simpleName), e)
     }
 
+    /** Dateien der Formate, die ein `.sc7`-Archiv enthalten kann; die erste ist jeweils die Hauptdatei. */
+    private val SC7_FORMATS = listOf(
+        listOf("si5", "sg5", "sn5"),
+        listOf("si4", "sg4", "sn4"),
+        listOf("si3", "sg3", "sn3"),
+        listOf("sci", "scg", "scn"),
+        listOf("pgn"),
+    )
+
     /**
-     * Öffnet die aus einem 7z-Archiv entpackte Datenbank in [dir] schreibgeschützt. [exts] sind die Endungen
-     * ihrer Dateien (die erste ist die Hauptdatei: si5, si4, si3, sci oder pgn), wie die Endung des Archivs sie angibt.
+     * Öffnet die aus einem `.sc7`-Archiv entpackte Datenbank in [dir] schreibgeschützt. Das Format ergibt sich aus
+     * den Dateien (Scid 5, 4, 3, Scidb oder PGN; bei mehreren gilt diese Reihenfolge).
      */
-    fun open7zExtracted(dir: File, name: String, exts: List<String>, progress: (Float) -> Unit): ChessDatabase {
-        val main = exts.first()
+    fun open7zExtracted(dir: File, name: String, progress: (Float) -> Unit): ChessDatabase {
         val files = dir.listFiles()?.map { it.name } ?: emptyList()
-        val base = files.firstOrNull { it.lowercase().endsWith(".$main") }?.dropLast(main.length + 1)
-            ?: throw LocalizedIOException(R.string.err_7z_no_db, main)
+        val (exts, base) = SC7_FORMATS.firstNotNullOfOrNull { exts ->
+            files.firstOrNull { it.lowercase().endsWith(".${exts[0]}") }?.let { exts to it.dropLast(exts[0].length + 1) }
+        } ?: throw LocalizedIOException(R.string.err_archive_no_db)
+        val main = exts[0]
         val missing = exts.filter { "$base.$it" !in files }
         if (missing.isNotEmpty()) throw LocalizedIOException(R.string.err_missing_files, missing.joinToString(", ") { "$base.$it" })
         val fs = JavaFileSet(dir, base)

@@ -38,28 +38,18 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.channels.FileChannel
 
-/**
- * Datenbankformat; [label] ist der Anzeigename als String-Ressource. Bei 7z-Archiven ist [inner] das Format
- * der enthaltenen Datenbank, die Endung nennt es (`name.si5.7z`).
- */
-enum class DbFormat(@StringRes val label: Int, val mainExt: String, val exts: List<String>, val inner: DbFormat? = null) {
-    SCID5(R.string.fmt_scid5, "si5", listOf("si5", "sg5", "sn5")),
-    SCID4(R.string.fmt_scid4, "si4", listOf("si4", "sg4", "sn4")),
-    SCID3(R.string.fmt_scid3, "si3", listOf("si3", "sg3", "sn3")),
-    SCIDB(R.string.fmt_scidb, "sci", listOf("sci", "scg", "scn")),
-    PGN(R.string.fmt_pgn, "pgn", listOf("pgn")),
+/** Datenbankformat; [label] ist der Anzeigename als String-Ressource, [packable]: lässt sich als `.sc7` packen. */
+enum class DbFormat(@StringRes val label: Int, val mainExt: String, val exts: List<String>, val packable: Boolean = false) {
+    SCID5(R.string.fmt_scid5, "si5", listOf("si5", "sg5", "sn5"), packable = true),
+    SCID4(R.string.fmt_scid4, "si4", listOf("si4", "sg4", "sn4"), packable = true),
+    SCID3(R.string.fmt_scid3, "si3", listOf("si3", "sg3", "sn3"), packable = true),
+    SCIDB(R.string.fmt_scidb, "sci", listOf("sci", "scg", "scn"), packable = true),
+    PGN(R.string.fmt_pgn, "pgn", listOf("pgn"), packable = true),
     SCIDB_ARCHIVE(R.string.fmt_scidb_archive, "scv", listOf("scv")),
     PGN_GZ(R.string.fmt_pgn_gz, "pgn.gz", listOf("pgn.gz")),
     PGN_ZIP(R.string.fmt_pgn_zip, "zip", listOf("zip")),
-    SCID5_7Z(R.string.fmt_scid5_7z, "si5.7z", listOf("si5.7z"), SCID5),
-    SCID4_7Z(R.string.fmt_scid4_7z, "si4.7z", listOf("si4.7z"), SCID4),
-    SCID3_7Z(R.string.fmt_scid3_7z, "si3.7z", listOf("si3.7z"), SCID3),
-    SCIDB_7Z(R.string.fmt_scidb_7z, "sci.7z", listOf("sci.7z"), SCIDB),
-    PGN_7Z(R.string.fmt_pgn_7z, "pgn.7z", listOf("pgn.7z"), PGN),
-    ;
-
-    /** Das 7z-Format, in das sich dieses Format packen lässt (null bei Archiven). */
-    val packed get() = entries.firstOrNull { it.inner == this }
+    /** 7z-Archiv mit einer Datenbank, eigenes Format von Scidc2go */
+    SC7(R.string.fmt_sc7, "sc7", listOf("sc7")),
 }
 
 /**
@@ -250,9 +240,7 @@ object SafStorage {
             DbFormat.SCID3 -> Scid4Database(fs, v3 = true)
             DbFormat.SCIDB -> ScidbDatabase(fs)
             DbFormat.PGN -> PgnDatabase(entry.baseName, fs.openRead("pgn"), progress)
-            DbFormat.SCIDB_ARCHIVE, DbFormat.PGN_GZ, DbFormat.PGN_ZIP,
-            DbFormat.SCID5_7Z, DbFormat.SCID4_7Z, DbFormat.SCID3_7Z, DbFormat.SCIDB_7Z, DbFormat.PGN_7Z,
-            -> openArchive(ctx, entry, progress)
+            DbFormat.SCIDB_ARCHIVE, DbFormat.PGN_GZ, DbFormat.PGN_ZIP, DbFormat.SC7 -> openArchive(ctx, entry, progress)
         }
     }
 
@@ -273,7 +261,7 @@ object SafStorage {
         try {
             val total = entry.size.coerceAtLeast(1)
             val raw = ctx.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("${entry.baseName}.$ext")
-            entry.format.inner?.let { inner ->
+            if (entry.format == DbFormat.SC7) {
                 // 7z braucht wahlfreien Zugriff; SAF liefert nicht immer eine durchsuchbare Datei
                 val tmp = File.createTempFile("archiv", ".7z", parent)
                 try {
@@ -284,7 +272,7 @@ object SafStorage {
                 } finally {
                     tmp.delete()
                 }
-                return Archives.open7zExtracted(dir, entry.baseName, inner.exts, progress)
+                return Archives.open7zExtracted(dir, entry.baseName, progress)
             }
             CountingInputStream(raw.buffered(1 shl 16)) { progress((it.toFloat() / total).coerceAtMost(1f)) }.use { inp ->
                 when (entry.format) {
@@ -323,14 +311,14 @@ object SafStorage {
             .any { it.baseName == baseName && it.format == format }
 
     /**
-     * Packt die Dateien der Datenbank [entry] unverändert in das 7z-Archiv `[baseName].si5.7z` (bzw. `.si4.7z` …)
-     * im Ordner [folderId]; im Archiv heißen sie `[baseName].si5` usw. Liefert die Größe des Archivs.
+     * Packt die Dateien der Datenbank [entry] unverändert in das 7z-Archiv `[baseName].sc7` im Ordner [folderId];
+     * im Archiv heißen sie `[baseName].si5` usw. Liefert die Größe des Archivs.
      */
     fun pack7z(
         ctx: Context, treeUri: Uri, folderId: String?, entry: DbEntry, baseName: String, progress: (Float) -> Unit,
     ): Long {
-        val packed = entry.format.packed ?: throw IllegalArgumentException(entry.format.name)
-        val name = "$baseName.${packed.mainExt}"
+        require(entry.format.packable) { entry.format.name }
+        val name = "$baseName.sc7"
         // Erst im Cache packen, damit im Ordner kein halbes Archiv liegen bleibt
         val tmp = File.createTempFile("pack", ".7z", archiveDir(ctx).apply { mkdirs() })
         try {
@@ -342,7 +330,8 @@ object SafStorage {
                 }
             }) { progress((it.toFloat() / total).coerceAtMost(1f)) }
             val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, folderId ?: DocumentsContract.getTreeDocumentId(treeUri))
-            val uri = DocumentsContract.createDocument(ctx.contentResolver, parent, "application/x-7z-compressed", name)
+            // Nicht application/x-7z-compressed: dann hängen manche Anbieter ".7z" an den Namen an
+            val uri = DocumentsContract.createDocument(ctx.contentResolver, parent, "application/octet-stream", name)
                 ?: throw LocalizedIOException(R.string.err_cannot_create, name)
             try {
                 val out = ctx.contentResolver.openOutputStream(uri) ?: throw LocalizedIOException(R.string.err_cannot_create, name)

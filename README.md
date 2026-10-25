@@ -6,9 +6,9 @@ Schachdatenbanken unterwegs: eine schlanke Android-App für Smartphone und Table
 
 - **Lesen:** Scid 3 (`.si3`), Scid 4 (`.si4`), Scid 5 (`.si5`), Scidb (`.sci`, Dateiversion 94), PGN,
   außerdem gepackt wie in Scidb: Scidb-Archive (`.scv`), PGN mit gzip (`.pgn.gz`) und ZIP-Archive mit PGN-Dateien (`.zip`),
-  sowie 7z-Archive mit einer Datenbank (`name.si5.7z`, `.si4.7z`, `.si3.7z`, `.sci.7z`, `.pgn.7z`)
+  sowie das eigene Format `.sc7` (7z-Archiv mit einer Datenbank)
 - **Schreiben:** Scid 5. Partien ersetzen, neu anhängen, zum Löschen markieren, neue Datenbanken anlegen;
-  außerdem jede Datenbank als 7z-Archiv packen
+  außerdem jede Datenbank als `.sc7` packen
 - **Analyse:** Stockfish 19 ist eingebaut (NNUE, 1–5 Varianten). Das Netz (98 MB) lädt die App beim ersten
   Einschalten der Analyse einmalig von stockfishchess.org; nur dafür braucht sie die Internet-Berechtigung.
 - **Ansichten:** Datenbankliste mit Suche und Brettansicht mit Zugliste, Varianten, Kommentaren und Bewertungszeichen.
@@ -25,7 +25,7 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    eine Datei der Datenbank: Liegt sie in einem schon freigegebenen Ordner (oder einem Unterordner davon), öffnet
    die App die Datenbank direkt. Sonst fragt sie einmalig nach dem Ordner, denn Android erlaubt den Zugriff auf
    die übrigen Dateien nur mit Ordnerfreigabe. Fehlt eine Datei der Datenbank, meldet die App welche.
-   Gepackte Datenbanken (`.scv`, `.pgn.gz`, `.zip`, `.7z`) entpackt die App beim Öffnen in ihren Cache und öffnet sie
+   Gepackte Datenbanken (`.scv`, `.pgn.gz`, `.zip`, `.sc7`) entpackt die App beim Öffnen in ihren Cache und öffnet sie
    schreibgeschützt; beim Schließen wird die entpackte Kopie gelöscht. Ein Scidb-Archiv darf wie in Scidb eine
    Scidb-, Scid-3/4- oder PGN-Datenbank enthalten. Aus einem ZIP-Archiv werden alle
    PGN-Dateien hintereinander gelesen, wie in Scidb. Zum Bearbeiten lassen sie sich in Scid 5 konvertieren.
@@ -40,10 +40,11 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    neue Scid-5-Datenbank im selben Ordner; das Original bleibt unverändert. Partien, die sich nicht übernehmen
    lassen (defekt oder größer als 128 KB), werden übersprungen und gemeldet.
    **Als 7z-Archiv packen** (ebenfalls im Menü) legt die Dateien einer Scid-3/4/5-, Scidb- oder PGN-Datenbank
-   unverändert in ein 7z-Archiv im selben Ordner, etwa `name.si5.7z` mit `name.si5`, `name.sg5` und `name.sn5`.
-   Die doppelte Endung nennt das enthaltene Format. Es ist ein gewöhnliches 7z-Archiv (LZMA2), das sich auch mit
-   7-Zip, PeaZip oder dem Dateimanager entpacken lässt. Umgekehrt öffnet die App selbst gepackte Archive, wenn sie
-   so heißen und die Dateien der Datenbank enthalten (Ordner im Archiv spielen keine Rolle).
+   unverändert in ein 7z-Archiv `name.sc7` im selben Ordner, etwa mit `name.si5`, `name.sg5` und `name.sn5`.
+   Es ist ein gewöhnliches 7z-Archiv (LZMA2): 7-Zip erkennt es am Inhalt und entpackt es trotz der eigenen Endung;
+   Packer, die nach der Endung gehen, öffnen es nach dem Umbenennen in `.7z`. Umgekehrt öffnet die App jedes 7z-Archiv mit
+   der Endung `.sc7`, das die Dateien einer Datenbank enthält; das Format erkennt sie an den Dateien
+   (Ordner im Archiv spielen keine Rolle).
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
      Weicht der Zug von der Partie ab, entsteht eine Variante.
@@ -102,9 +103,9 @@ Die Texte der Oberfläche stehen in `app/src/main/res/values/strings.xml` (Engli
 - Scidb: Der Leser folgt dem Scidb-Quelltext. Getestet ist er nur mit von Hand nach Scidbs Encoder-Regeln
   erzeugten Daten, nicht mit echten Scidb-Dateien. Ältere Scidb-Dateiversionen (91–93) und
   Spielvarianten (Crazyhouse, Antichess usw.) werden nicht unterstützt.
-- 7z: Die App schreibt LZMA2 und liest, was Apache Commons Compress kann (LZMA, LZMA2, BZip2, Deflate, BCJ-Filter,
+- `.sc7`: Die App schreibt LZMA2 und liest, was Apache Commons Compress kann (LZMA, LZMA2, BZip2, Deflate, BCJ-Filter,
   auch solide Archive). PPMd und verschlüsselte Archive werden nicht unterstützt. Getestet mit 7-Zip 23.01 in beide
-  Richtungen: Von 7-Zip gepackte Archive (`app/src/test/resources/*.7z`) lassen sich öffnen, und 7-Zip prüft die
+  Richtungen: Von 7-Zip gepackte Archive (`app/src/test/resources/*.sc7`) lassen sich öffnen, und 7-Zip prüft die
   Archive der App fehlerfrei und entpackt sie byte-gleich.
 - Archive: Scidb-Archive werden so erzeugt, wie Scidbs `archive::packFiles` sie schreibt (zlib und unkomprimiert,
   CRC-32-Prüfsumme), gzip- und ZIP-Dateien mit den Java-Bibliotheken. Echte Scidb-Archive sind ungetestet.

@@ -116,7 +116,7 @@ class ArchiveTest {
     /** Packt Dateien wie die App (`name.si5` usw.); mit SCIDC2GO_OUT=<dir> bleibt das Archiv zum Prüfen mit 7-Zip dort liegen. */
     private fun pack7z(base: String, exts: List<String>, newBase: String): File {
         val out = System.getenv("SCIDC2GO_OUT")?.let { File(it).apply { mkdirs() } } ?: createTempDirectory().toFile()
-        val archive = File(out, "$newBase.${exts.first()}.7z")
+        val archive = File(out, "$newBase-${exts.first()}.sc7")
         Archives.write7z(archive, exts.map { ext -> "$newBase.$ext" to { File(resDir, "$base.$ext").inputStream() } })
         return archive
     }
@@ -133,7 +133,7 @@ class ArchiveTest {
             assertEquals(exts.map { "neu.$it" }, Archives.extract7z(archive, dir))
             for (ext in exts) assertTrue(File(resDir, "$base.$ext").readBytes().contentEquals(File(dir, "neu.$ext").readBytes()))
             val expected = original().use { pgns(it) }
-            val db = Archives.open7zExtracted(dir, "neu", exts, {})
+            val db = Archives.open7zExtracted(dir, "neu", {})
             assertFalse(db.writable)
             assertTrue(db.formatName.endsWith(", 7z"))
             assertEquals(expected, pgns(db))
@@ -143,32 +143,44 @@ class ArchiveTest {
     }
 
     @Test fun sevenZipFrom7Zip() {
-        // Mit 7-Zip 23.01 erzeugt: "7zz a s5.si5.7z s5.si5 s5.sg5 s5.sn5" (solid, LZMA2) und
-        // "7zz a -mx=9 sample.pgn.7z partien" (PGN in einem Unterordner)
+        // Mit 7-Zip 23.01 erzeugt und dann umbenannt: "7zz a s5.7z s5.si5 s5.sg5 s5.sn5" (solid, LZMA2)
+        // und "7zz a -mx=9 sample.7z partien" (PGN in einem Unterordner)
         val s5 = Scid5Database.open(JavaFileSet(resDir, "s5"), writable = false).use { pgns(it) }
         val dir = createTempDirectory().toFile()
-        Archives.extract7z(File(resDir, "s5.si5.7z"), dir)
-        Archives.open7zExtracted(dir, "s5", listOf("si5", "sg5", "sn5"), {}).use { assertEquals(s5, pgns(it)) }
+        Archives.extract7z(File(resDir, "s5.sc7"), dir)
+        Archives.open7zExtracted(dir, "s5", {}).use {
+            assertEquals("Scid 5, 7z", it.formatName)
+            assertEquals(s5, pgns(it))
+        }
 
         val pgn = PgnDatabase("a", RandomAccessFile(File(resDir, "sample.pgn"), "r").channel).use { pgns(it) }
         val dir2 = createTempDirectory().toFile()
-        assertEquals(listOf("sample.pgn"), Archives.extract7z(File(resDir, "sample.pgn.7z"), dir2))
-        Archives.open7zExtracted(dir2, "sample", listOf("pgn"), {}).use { assertEquals(pgn, pgns(it)) }
+        assertEquals(listOf("sample.pgn"), Archives.extract7z(File(resDir, "sample.sc7"), dir2))
+        Archives.open7zExtracted(dir2, "sample", {}).use { assertEquals(pgn, pgns(it)) }
     }
 
     @Test(expected = IOException::class)
     fun sevenZipMissingFile() {
         val dir = createTempDirectory().toFile()
-        val archive = File(createTempDirectory().toFile(), "x.si5.7z")
+        val archive = File(createTempDirectory().toFile(), "x.sc7")
         Archives.write7z(archive, listOf("x.si5" to { File(resDir, "s5.si5").inputStream() }))
         Archives.extract7z(archive, dir)
-        Archives.open7zExtracted(dir, "x", listOf("si5", "sg5", "sn5"), {})
+        Archives.open7zExtracted(dir, "x", {})
+    }
+
+    @Test(expected = LocalizedIOException::class)
+    fun sevenZipWithoutDatabase() {
+        val dir = createTempDirectory().toFile()
+        val archive = File(createTempDirectory().toFile(), "x.sc7")
+        Archives.write7z(archive, listOf("liesmich.txt" to { "Hallo".byteInputStream() }))
+        Archives.extract7z(archive, dir)
+        Archives.open7zExtracted(dir, "x", {})
     }
 
     @Test(expected = LocalizedIOException::class)
     fun sevenZipCorrupt() {
-        val bytes = File(resDir, "s5.si5.7z").readBytes()
-        val broken = File(createTempDirectory().toFile(), "x.si5.7z")
+        val bytes = File(resDir, "s5.sc7").readBytes()
+        val broken = File(createTempDirectory().toFile(), "x.sc7")
         broken.writeBytes(bytes.copyOf(bytes.size - 40))
         Archives.extract7z(broken, createTempDirectory().toFile())
     }

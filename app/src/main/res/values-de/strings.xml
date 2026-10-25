@@ -15,6 +15,7 @@
 
     <!-- Datenbankformate -->
     <string name="fmt_scidb_archive">Scidb-Archiv</string>
+    <string name="fmt_sc7">7z-Archiv</string>
 
     <!-- Stockfish-Netz -->
     <string name="net_title">Stockfish-Netz laden</string>
@@ -248,7 +249,6 @@
     <string name="err_7z">Fehler im 7z-Archiv: %s</string>
     <string name="err_7z_encrypted">Das 7z-Archiv ist verschlüsselt; verschlüsselte Archive werden nicht unterstützt</string>
     <string name="err_7z_memory">Nicht genug Speicher für das 7z-Archiv</string>
-    <string name="err_7z_no_db">Das 7z-Archiv enthält keine .%s-Datei</string>
 
     <!-- Fehler der Engines -->
     <string name="err_net_download">Stockfish-Netz konnte nicht geladen werden: %s</string>

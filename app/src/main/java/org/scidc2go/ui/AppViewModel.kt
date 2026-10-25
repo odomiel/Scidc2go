@@ -668,16 +668,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     /** Packen geht bei Datenbanken aus einem freigegebenen Ordner, die selbst kein Archiv sind. */
-    val canPack get() = db != null && dbEntry?.format?.packed != null && dbTree != null
+    val canPack get() = db != null && dbEntry?.format?.packable == true && dbTree != null
 
     fun requestPack() {
         val entry = dbEntry ?: return
         val tree = dbTree ?: return
-        val packed = entry.format.packed ?: return
         runBusy(str(R.string.busy_check_name)) {
             packRequest = withContext(Dispatchers.IO) {
                 generateSequence(1) { it + 1 }.map { if (it == 1) entry.baseName else "${entry.baseName}-$it" }
-                    .first { !SafStorage.dbExists(ctx, tree, entry.folderId, it, packed) }
+                    .first { !SafStorage.dbExists(ctx, tree, entry.folderId, it, DbFormat.SC7) }
             }
         }
     }
@@ -688,13 +687,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         packRequest = null
         val entry = dbEntry ?: return
         val tree = dbTree ?: return
-        val packed = entry.format.packed ?: return
-        val clean = name.trim().removeSuffix(".7z").removeSuffix(".${entry.format.mainExt}")
+        val clean = name.trim().removeSuffix(".sc7")
         if (clean.isEmpty()) return
-        val file = "$clean.${packed.mainExt}"
+        val file = "$clean.sc7"
         runBusy(str(R.string.busy_packing, file, 0)) {
             val size = withContext(Dispatchers.IO) {
-                if (SafStorage.dbExists(ctx, tree, entry.folderId, clean, packed)) throw LocalizedIOException(R.string.err_exists, file)
+                if (SafStorage.dbExists(ctx, tree, entry.folderId, clean, DbFormat.SC7)) throw LocalizedIOException(R.string.err_exists, file)
                 SafStorage.pack7z(ctx, tree, entry.folderId, entry, clean) { p ->
                     busy = str(R.string.busy_packing, file, (p * 100).toInt())
                 }
