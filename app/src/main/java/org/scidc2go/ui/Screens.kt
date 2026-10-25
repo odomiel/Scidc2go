@@ -28,6 +28,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
@@ -608,19 +609,19 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
     var saveDialog by remember { mutableStateOf(false) }
     var commentDialog by remember { mutableStateOf(false) }
     var pasteDialog by remember { mutableStateOf(false) }
+    /** Titel in voller Länge unter der Kopfleiste zeigen (Antippen des Titels). */
+    var titleOpen by remember { mutableStateOf(false) }
+    val title = "${game.white} – ${game.black}"
+    val subtitle = listOf(game.event, game.date, game.result).filter { it != "?" }.joinToString(" · ") +
+        if (vm.dirty) " · " + stringResource(R.string.modified) else ""
 
     Scaffold(
-        topBar = {
+        topBar = { Column {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("${game.white} – ${game.black}", maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            listOf(game.event, game.date, game.result).filter { it != "?" }.joinToString(" · ") +
-                                if (vm.dirty) " · " + stringResource(R.string.modified) else "",
-                            style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
+                    Column(Modifier.clickable { titleOpen = !titleOpen }) {
+                        Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
+                        Text(subtitle, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 },
                 navigationIcon = {
@@ -686,7 +687,16 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                     }
                 },
             )
-        },
+            if (titleOpen) {
+                Column(
+                    Modifier.fillMaxWidth().clickable { titleOpen = false }.padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    Text(subtitle, style = MaterialTheme.typography.labelMedium)
+                }
+                HorizontalDivider()
+            }
+        } },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { pad ->
         BoxWithConstraints(Modifier.padding(pad).fillMaxSize()) {
