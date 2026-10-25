@@ -22,6 +22,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import org.scidc2go.AppLog
 import org.scidc2go.LocalizedIOException
 import org.scidc2go.R
 import org.xmlpull.v1.XmlPullParser
@@ -72,8 +73,9 @@ object OexEngines {
                     }
                 }
                 parser.close()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // fehlerhafte Engine-App überspringen
+                AppLog.w("Engine", "Engine-App ${ai.packageName} übersprungen", e)
             }
         }
         return result.sortedBy { it.name.lowercase() }

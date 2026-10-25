@@ -62,6 +62,11 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    Neben dem eingebauten Stockfish erscheinen dort Engines aus installierten Engine-Apps nach dem
    Open-Exchange-Standard (OEX). Weil Android 10 und neuer Apps keine Programme aus ihrem Datenverzeichnis
    starten lässt, kopiert die App solche Engines und startet sie über den System-Linker (`/system/bin/linker64`).
+   **Protokoll:** Die App schreibt Aktionen, Meldungen, Fehler und Abstürze (mit Stack-Trace) in ein Protokoll im
+   App-Verzeichnis, höchstens zweimal 512 KB. „Ausführlich“ nimmt die Kommunikation mit der Engine dazu.
+   Das Protokoll lässt sich anzeigen, als Textdatei speichern (etwa um es einer Fehlermeldung beizulegen) und
+   löschen. Es enthält Datei- und Datenbanknamen, aber keine Partien (ausführlich auch die analysierten
+   Stellungen), und verlässt das Gerät nur beim Speichern.
 
 ## Bauen
 
@@ -86,6 +91,11 @@ storePassword=…
 keyAlias=…
 keyPassword=…
 ```
+
+Fehlersuche: Release-Builds werden von R8 verkleinert, aber nicht verschleiert; Klassen- und Methodennamen in den
+Stack-Traces des Protokolls sind also lesbar. Genaue Zeilennummern liefert `retrace` aus den Android-cmdline-tools
+mit der Zuordnungsdatei des Builds, die `tools/build-apk.sh` als `dist/scidc2go-<Version>-mapping.txt` ablegt und
+die bei jedem Release mit hochgeladen wird: `retrace scidc2go-<Version>-mapping.txt protokoll.txt`.
 
 `tools/svg2vector.py` wandelt die Figuren-SVGs in Android-Vektorgrafiken um.
 

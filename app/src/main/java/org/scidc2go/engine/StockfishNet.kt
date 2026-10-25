@@ -17,6 +17,7 @@
  */
 package org.scidc2go.engine
 
+import org.scidc2go.AppLog
 import org.scidc2go.LocalizedIOException
 import org.scidc2go.R
 import org.scidc2go.Text
@@ -48,12 +49,14 @@ object StockfishNet {
         var error: Exception? = null
         for (url in urls) {
             try {
+                AppLog.i("Netz", "Lade $url")
                 fetch(url, tmp, progress)
                 tmp.renameTo(target)
                 // ältere Netze früherer Versionen entfernen
                 dir.listFiles()?.filter { it.name.endsWith(".nnue") && it.name != NAME }?.forEach { it.delete() }
                 return target
             } catch (e: Exception) {
+                AppLog.w("Netz", "Laden von $url fehlgeschlagen", e)
                 tmp.delete()
                 error = e
             }

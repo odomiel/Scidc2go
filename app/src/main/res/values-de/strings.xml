@@ -44,6 +44,16 @@
     <string name="settings_language">Sprache</string>
     <string name="lang_system">Wie System</string>
     <string name="settings_engine">Engine</string>
+    <string name="settings_log">Protokoll</string>
+    <string name="log_detailed">Ausführlich (mit Engine-Kommunikation)</string>
+    <string name="log_show">Anzeigen</string>
+    <string name="log_save">Speichern …</string>
+    <string name="log_clear">Löschen</string>
+    <string name="log_hint">Das Protokoll hilft bei der Fehlersuche. Es bleibt auf dem Gerät und enthält Aktionen, Meldungen und Fehler, auch Datei- und Datenbanknamen, aber keine Partien (das ausführliche Protokoll auch die analysierten Stellungen). Für eine Fehlermeldung speichern und mitschicken.</string>
+    <string name="log_empty">Das Protokoll ist leer</string>
+    <string name="log_saving">Speichere Protokoll …</string>
+    <string name="log_saved">Protokoll gespeichert</string>
+    <string name="log_cleared">Protokoll gelöscht</string>
     <string name="engine_builtin">Stockfish (eingebaut)</string>
     <string name="oex_hint_none">Weitere Engines erscheinen hier, wenn Engine-Apps nach dem Open-Exchange-Standard (OEX) installiert sind.</string>
     <string name="oex_hint">Weitere Engines stammen aus installierten Engine-Apps (Open Exchange).</string>

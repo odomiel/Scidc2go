@@ -37,6 +37,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.scidc2go.AppLog
 import org.scidc2go.LocalizedIOException
 import org.scidc2go.R
 import org.scidc2go.chess.Game
@@ -85,7 +86,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var busy by mutableStateOf<String?>(null)
         private set
-    var message by mutableStateOf<String?>(null)
+    /** Meldung für die Oberfläche; jede Meldung kommt auch ins Protokoll. */
+    var message: String?
+        get() = messageState.value
+        set(value) {
+            if (value != null) AppLog.i("Meldung", value)
+            messageState.value = value
+        }
+    private val messageState = mutableStateOf<String?>(null)
 
     // Datenbank
     var db by mutableStateOf<ChessDatabase?>(null)
@@ -132,6 +140,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     init {
+        // logDetailed ist hier noch nicht initialisiert (steht weiter unten)
+        AppLog.detailed = prefs.getBoolean("logDetailed", false)
         SafStorage.cleanArchives(ctx)
         refreshEngines()
         folderUri?.let { refreshFolder() }
@@ -159,6 +169,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri).filter { it.complete } }
             } catch (e: Exception) {
+                AppLog.e("Ordner", "Liste nicht lesbar", e)
                 message = str(R.string.err_folder_unreadable, e.userMessage(ctx))
             }
         }
@@ -167,9 +178,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun runBusy(label: String, block: suspend () -> Unit) {
         viewModelScope.launch {
             busy = label
+            AppLog.i("Aktion", label)
             try {
                 block()
             } catch (e: Exception) {
+                AppLog.e("Fehler", label, e)
                 message = e.userMessage(ctx)
             } finally {
                 busy = null
@@ -721,6 +734,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen = Screen.BOARD
             analyzeCurrent()
         } catch (e: Exception) {
+            AppLog.w("PGN", "Einfügen fehlgeschlagen", e)
             message = str(R.string.err_invalid_pgn, e.userMessage(ctx))
         }
     }
@@ -816,6 +830,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
     }
 
+    /** Protokoll mit Engine-Kommunikation (siehe [AppLog.detailed]). */
+    var logDetailed by mutableStateOf(prefs.getBoolean("logDetailed", false))
+        private set
+
+    fun toggleLogDetailed() {
+        logDetailed = !logDetailed
+        AppLog.detailed = logDetailed
+        prefs.edit().putBoolean("logDetailed", logDetailed).apply()
+        AppLog.i("Protokoll", if (logDetailed) "ausführlich" else "normal")
+    }
+
+    /** Inhalt des Protokolls zum Anzeigen. */
+    suspend fun logText(): String = withContext(Dispatchers.IO) { AppLog.text() }
+
+    /** Schreibt das Protokoll in das vom Nutzer gewählte Dokument [uri]. */
+    fun saveLog(uri: Uri?) {
+        if (uri == null) return
+        runBusy(str(R.string.log_saving)) {
+            withContext(Dispatchers.IO) {
+                val out = ctx.contentResolver.openOutputStream(uri, "wt") ?: throw LocalizedIOException(R.string.err_cannot_create, uri.lastPathSegment ?: "")
+                out.use { it.write(AppLog.text().toByteArray()) }
+            }
+            message = str(R.string.log_saved)
+        }
+    }
+
+    fun clearLog() {
+        AppLog.clear()
+        message = str(R.string.log_cleared)
+    }
+
     fun changeTheme(mode: ThemeMode) {
         themeMode = mode
         prefs.edit().putString("theme", mode.name).apply()
@@ -824,7 +869,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshEngines() {
         viewModelScope.launch {
             oexEngines = withContext(Dispatchers.IO) {
-                try { OexEngines.list(ctx) } catch (_: Exception) { emptyList() }
+                try {
+                    OexEngines.list(ctx)
+                } catch (e: Exception) {
+                    AppLog.w("Engine", "Engine-Apps nicht abfragbar", e)
+                    emptyList()
+                }
             }
         }
     }
@@ -860,6 +910,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         options["Threads"] = maxOf(1, minOf(4, cores - 1)).toString()
         options["Hash"] = "64"
         options["MultiPV"] = multiPv.toString()
+        AppLog.i("Engine", "Starte ${oex?.let { "${it.name} (${it.packageName})" } ?: "Stockfish"}: ${command.joinToString(" ")}, $options")
         lateinit var e: UciEngine
         e = UciEngine(
             command, ctx.filesDir, options,
@@ -877,6 +928,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun engineExited(e: UciEngine, oex: OexEngine?) {
         if (engine !== e) return
+        AppLog.w("Engine", "${oex?.name ?: "Stockfish"} hat sich beendet, letzte Ausgabe: ${e.lastOutput}")
         engine = null
         engineOn = false
         engineLines = emptyList()

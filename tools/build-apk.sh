@@ -1,6 +1,8 @@
 #!/bin/sh
 # Baut eine aktuelle APK von Scidc2go und legt sie in dist/ ab: dist/scidc2go-<Version>.apk, wenn der Stand
 # genau dem Release-Tag v<Version> entspricht, sonst dist/scidc2go-<Version>-<Commit>[-geaendert].apk.
+# Bei Release-Builds kommt die R8-Zuordnung dazu (<Name>-mapping.txt): Damit löst
+# "retrace <Name>-mapping.txt protokoll.txt" (Android SDK, cmdline-tools) Stack-Traces aus dem Protokoll auf.
 #
 # Aufruf: tools/build-apk.sh [--debug] [--no-tests]
 #   --debug     Debug-APK statt signierter Release-APK
@@ -57,4 +59,5 @@ SRC="app/build/outputs/apk/$TYPE/app-$TYPE.apk"
 OUT="dist/$NAME.apk"
 mkdir -p dist
 cp "$SRC" "$OUT"
+[ "$TYPE" = release ] && cp app/build/outputs/mapping/release/mapping.txt "dist/$NAME-mapping.txt"
 echo "Fertig: $OUT ($(du -h "$OUT" | cut -f1), Version $VERSION)"

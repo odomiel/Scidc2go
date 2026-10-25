@@ -54,6 +54,16 @@
     <string name="settings_language">Language</string>
     <string name="lang_system">System default</string>
     <string name="settings_engine">Engine</string>
+    <string name="settings_log">Log</string>
+    <string name="log_detailed">Detailed (including engine communication)</string>
+    <string name="log_show">Show</string>
+    <string name="log_save">Save …</string>
+    <string name="log_clear">Clear</string>
+    <string name="log_hint">The log helps with error analysis. It stays on the device and contains actions, messages and errors, including file and database names, but no games (the detailed log also contains the analysed positions). To report an error, save it and send it along.</string>
+    <string name="log_empty">The log is empty</string>
+    <string name="log_saving">Saving log …</string>
+    <string name="log_saved">Log saved</string>
+    <string name="log_cleared">Log cleared</string>
     <string name="engine_builtin">Stockfish (built-in)</string>
     <string name="oex_hint_none">More engines appear here when engine apps following the Open Exchange standard (OEX) are installed.</string>
     <string name="oex_hint">Additional engines come from installed engine apps (Open Exchange).</string>

@@ -17,6 +17,7 @@
  */
 package org.scidc2go.engine
 
+import org.scidc2go.AppLog
 import org.scidc2go.chess.Position
 import java.io.BufferedReader
 import java.io.File
@@ -84,13 +85,16 @@ class UciEngine(
             while (true) {
                 val line = reader.readLine() ?: break
                 if (line.isNotBlank()) lastOutput = line
+                // info-Zeilen kommen viele pro Sekunde; nur Meldungen der Engine protokollieren
+                if (!line.startsWith("info ") || line.startsWith("info string")) AppLog.d("UCI") { "< $line" }
                 when {
                     line.startsWith("id name ") -> name = line.substring(8)
                     line.startsWith("info ") && line.contains(" pv ") -> if (pendingBestmoves == 0) parseInfo(line)
                     line.startsWith("bestmove") -> if (pendingBestmoves > 0) pendingBestmoves-- else searching = false
                 }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (process != null) AppLog.w("UCI", "Lesen von der Engine fehlgeschlagen", e)
         }
         if (process != null) {
             exited = true
@@ -133,8 +137,10 @@ class UciEngine(
     @Synchronized
     private fun send(cmd: String) {
         try {
+            AppLog.d("UCI") { "> $cmd" }
             writer?.apply { write(cmd); write("\n"); flush() }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            AppLog.w("UCI", "Senden an die Engine fehlgeschlagen: $cmd", e)
         }
     }
 

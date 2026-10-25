@@ -29,6 +29,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -101,6 +103,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -294,6 +297,9 @@ fun NameDialog(title: String, label: String, initial: String = "", onDismiss: ()
 
 @Composable
 fun SettingsDialog(vm: AppViewModel, onDismiss: () -> Unit) {
+    var showLog by remember { mutableStateOf(false) }
+    val saveLog = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { vm.saveLog(it) }
+    val stamp = remember { java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.ROOT).format(java.util.Date()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings)) },
@@ -326,9 +332,57 @@ fun SettingsDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.settings_log), fontWeight = FontWeight.Bold)
+                Row(
+                    Modifier.fillMaxWidth().toggleable(vm.logDetailed, onValueChange = { vm.toggleLogDetailed() })
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.log_detailed), Modifier.weight(1f))
+                    Switch(vm.logDetailed, onCheckedChange = null)
+                }
+                Row {
+                    TextButton({ showLog = true }) { Text(stringResource(R.string.log_show)) }
+                    TextButton({ saveLog.launch("scidc2go-log-$stamp.txt") }) { Text(stringResource(R.string.log_save)) }
+                    TextButton({ vm.clearLog() }) { Text(stringResource(R.string.log_clear)) }
+                }
+                Text(
+                    stringResource(R.string.log_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.ok)) } },
+    )
+    if (showLog) LogDialog(vm) { showLog = false }
+}
+
+/** Zeigt das Protokoll (das Ende, bei sehr langen Protokollen nur die letzten 100 000 Zeichen). */
+@Composable
+private fun LogDialog(vm: AppViewModel, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf<String?>(null) }
+    val scroll = rememberScrollState()
+    LaunchedEffect(Unit) { text = vm.logText().takeLast(100_000) }
+    LaunchedEffect(text) { scroll.scrollTo(scroll.maxValue) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_log)) },
+        text = {
+            val t = text
+            when {
+                t == null -> LinearProgressIndicator(Modifier.fillMaxWidth())
+                t.isEmpty() -> Text(stringResource(R.string.log_empty))
+                else -> SelectionContainer {
+                    Text(
+                        t, Modifier.verticalScroll(scroll),
+                        fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
+        confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.close)) } },
     )
 }
 
@@ -362,6 +416,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 Text(stringResource(R.string.about_pieces))
                 Text(stringResource(R.string.about_formats))
                 Text("• AndroidX / Jetpack Compose – Apache 2.0")
+                Text("• Apache Commons Compress – Apache 2.0, XZ for Java – 0BSD")
             }
         },
         confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.ok)) } },

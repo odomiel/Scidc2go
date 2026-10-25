@@ -18,6 +18,7 @@
 package org.scidc2go.ui
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.graphics.Color
 import androidx.activity.ComponentActivity
@@ -26,12 +27,21 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
+import org.scidc2go.AppLog
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val info = packageManager.getPackageInfo(packageName, 0)
+        AppLog.init(
+            filesDir,
+            "Scidc2go ${info.versionName} (${info.longVersionCode}), Android ${Build.VERSION.RELEASE} " +
+                "(API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}, " +
+                "ABI ${Build.SUPPORTED_ABIS.joinToString()}, Sprache ${Locale.getDefault().toLanguageTag()}",
+        )
         enableEdgeToEdge()
         if (savedInstanceState == null) handleIntent(intent)
         setContent {

@@ -63,6 +63,10 @@ Free software under the GNU GPL version 3 or later (see `COPYING`), with no prop
    Besides the built-in Stockfish, engines from installed engine apps following the Open Exchange standard (OEX)
    appear there. Since Android 10 and later do not allow apps to run programs from their data directory, the app
    copies such engines and starts them through the system linker (`/system/bin/linker64`).
+   **Log:** the app writes actions, messages, errors and crashes (with stack trace) to a log in its app directory,
+   at most twice 512 KB. “Detailed” adds the communication with the engine. The log can be shown, saved as a
+   text file (for example to attach it to a bug report) and cleared. It contains file and database names but no
+   games (in detailed mode also the analysed positions), and it only leaves the device when you save it.
 
 ## Building
 
@@ -87,6 +91,11 @@ storePassword=…
 keyAlias=…
 keyPassword=…
 ```
+
+Debugging: release builds are shrunk by R8 but not obfuscated, so class and method names in the log's stack traces
+are readable. Exact line numbers come from `retrace` in the Android cmdline-tools with the build's mapping file,
+which `tools/build-apk.sh` stores as `dist/scidc2go-<version>-mapping.txt` and which is uploaded with every release:
+`retrace scidc2go-<version>-mapping.txt log.txt`.
 
 `tools/svg2vector.py` converts the piece SVGs into Android vector drawables.
 
