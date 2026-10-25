@@ -22,12 +22,15 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import org.scidc2go.db.Archives
 import org.scidc2go.db.ChessDatabase
+import org.scidc2go.db.CountingInputStream
 import org.scidc2go.db.DbFileSet
 import org.scidc2go.db.PgnDatabase
 import org.scidc2go.db.Scid4Database
 import org.scidc2go.db.Scid5Database
 import org.scidc2go.db.ScidbDatabase
+import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.channels.FileChannel
@@ -38,6 +41,9 @@ enum class DbFormat(val label: String, val mainExt: String, val exts: List<Strin
     SCID3("Scid 3", "si3", listOf("si3", "sg3", "sn3")),
     SCIDB("Scidb", "sci", listOf("sci", "scg", "scn")),
     PGN("PGN", "pgn", listOf("pgn")),
+    SCIDB_ARCHIVE("Scidb-Archiv", "scv", listOf("scv")),
+    PGN_GZ("PGN gzip", "pgn.gz", listOf("pgn.gz")),
+    PGN_ZIP("PGN zip", "zip", listOf("zip")),
 }
 
 /**
@@ -205,16 +211,14 @@ object SafStorage {
 
     /** Gruppiert (Name, Größe, URI) nach Basisname und Format. */
     private fun group(docs: List<Triple<String, Long, Uri>>): List<DbEntry> {
-        val extToFormat = HashMap<String, DbFormat>()
-        for (f in DbFormat.entries) for (e in f.exts) extToFormat[e] = f
+        // Längste Endung zuerst, damit name.pgn.gz nicht als name.pgn + gz zählt
+        val exts = DbFormat.entries.flatMap { f -> f.exts.map { it to f } }.sortedByDescending { it.first.length }
         val byBase = HashMap<Pair<String, DbFormat>, MutableMap<String, Uri>>()
         val sizes = HashMap<Pair<String, DbFormat>, Long>()
         for ((name, size, uri) in docs) {
-            val dot = name.lastIndexOf('.')
-            if (dot <= 0) continue
-            val ext = name.substring(dot + 1).lowercase()
-            val format = extToFormat[ext] ?: continue
-            val key = name.substring(0, dot) to format
+            val lower = name.lowercase()
+            val (ext, format) = exts.firstOrNull { (e, _) -> lower.length > e.length + 1 && lower.endsWith(".$e") } ?: continue
+            val key = name.dropLast(ext.length + 1) to format
             byBase.getOrPut(key) { HashMap() }[ext] = uri
             sizes[key] = (sizes[key] ?: 0L) + size
         }
@@ -230,6 +234,40 @@ object SafStorage {
             DbFormat.SCID3 -> Scid4Database(fs, v3 = true)
             DbFormat.SCIDB -> ScidbDatabase(fs)
             DbFormat.PGN -> PgnDatabase(entry.baseName, fs.openRead("pgn"), progress)
+            DbFormat.SCIDB_ARCHIVE, DbFormat.PGN_GZ, DbFormat.PGN_ZIP -> openArchive(ctx, entry, progress)
+        }
+    }
+
+    /** Arbeitsverzeichnis für entpackte Archive. */
+    private fun archiveDir(ctx: Context) = File(ctx.cacheDir, "archive")
+
+    /** Löscht übrig gebliebene entpackte Archive (z.B. nach einem Absturz); nur aufrufen, solange keins offen ist. */
+    fun cleanArchives(ctx: Context) {
+        archiveDir(ctx).deleteRecursively()
+    }
+
+    /** Entpackt das Archiv [entry] in ein eigenes Verzeichnis im Cache und öffnet die Datenbank darin. */
+    private fun openArchive(ctx: Context, entry: DbEntry, progress: (Float) -> Unit): ChessDatabase {
+        val ext = entry.format.mainExt
+        val uri = entry.files[ext] ?: throw FileNotFoundException("${entry.baseName}.$ext")
+        val parent = archiveDir(ctx).apply { mkdirs() }
+        val dir = java.nio.file.Files.createTempDirectory(parent.toPath(), "db").toFile()
+        try {
+            val total = entry.size.coerceAtLeast(1)
+            val raw = ctx.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("${entry.baseName}.$ext")
+            CountingInputStream(raw.buffered(1 shl 16)) { progress((it.toFloat() / total).coerceAtMost(1f)) }.use { inp ->
+                when (entry.format) {
+                    DbFormat.SCIDB_ARCHIVE -> Archives.extractScidbArchive(inp, dir)
+                    DbFormat.PGN_GZ -> Archives.extractGzip(inp, File(dir, "${entry.baseName}.pgn"))
+                    else -> if (Archives.extractZipPgn(inp, File(dir, "${entry.baseName}.pgn")) == 0) {
+                        throw IOException("${entry.baseName}.zip enthält keine PGN-Datei")
+                    }
+                }
+            }
+            return Archives.openExtracted(dir, entry.baseName, entry.format.label, progress)
+        } catch (e: Throwable) {
+            dir.deleteRecursively()
+            throw e
         }
     }
 

@@ -120,6 +120,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     init {
+        SafStorage.cleanArchives(ctx)
         refreshEngines()
         folderUri?.let { refreshFolder() }
         newGame()

@@ -219,7 +219,7 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
             }
             if (vm.folderUri == null) {
                 Column(Modifier.padding(24.dp)) {
-                    Text("Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN). " +
+                    Text("Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN, auch gepackt). " +
                         "Oder öffne einzelne Dateien.")
                     Spacer(Modifier.height(12.dp))
                     Button({ pickFolder.launch(null) }) { Text("Ordner wählen") }
@@ -348,7 +348,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
         title = { Text("Scidc2go $version") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Schachdatenbanken unterwegs: lesen von Scid 3/4/5, Scidb und PGN, schreiben von Scid 5.")
+                Text("Schachdatenbanken unterwegs: lesen von Scid 3/4/5, Scidb und PGN (auch Scidb-Archive .scv sowie PGN als .gz oder .zip), schreiben von Scid 5.")
                 Spacer(Modifier.height(8.dp))
                 Text("Freie Software unter der GNU General Public License, Version 3 oder später. " +
                     "Ohne Gewähr. Quelltext und Lizenztext liegen dem Projekt bei.")
