@@ -394,6 +394,8 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                         DropdownMenu(listMenu, { listMenu = false }) {
                             DropdownMenuItem({ Text("Markierte Partien löschen") },
                                 onClick = { listMenu = false; vm.requestDeleteMarked() })
+                            DropdownMenuItem({ Text("Datenbank komprimieren") }, enabled = vm.canCompact,
+                                onClick = { listMenu = false; vm.requestCompact() })
                         }
                     }
                 },
@@ -470,6 +472,21 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                 }
             }
         }
+    }
+    vm.compactRequest?.let { marked ->
+        AlertDialog(
+            onDismissRequest = { vm.cancelCompact() },
+            title = { Text("${db.name} komprimieren?") },
+            text = {
+                Text(
+                    (if (marked > 0) "$marked zum Löschen markierte Partie(n) werden endgültig entfernt. " else "") +
+                        "Ungenutzter Platz in der Partiedatei und nicht mehr verwendete Namen werden freigegeben. " +
+                        "Die App schreibt dazu eine neue Kopie und ersetzt das Original erst, wenn sie vollständig ist.",
+                )
+            },
+            confirmButton = { TextButton({ vm.confirmCompact() }) { Text("Komprimieren") } },
+            dismissButton = { TextButton({ vm.cancelCompact() }) { Text("Abbrechen") } },
+        )
     }
     if (vm.deleteRequest.isNotEmpty()) {
         val n = vm.deleteRequest.size

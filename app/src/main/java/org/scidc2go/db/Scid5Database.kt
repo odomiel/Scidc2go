@@ -180,18 +180,23 @@ class Scid5Database private constructor(
             }
         }.also { lookup = it }
         maps[nt][v]?.let { return it }
+        val nw = namesWrite!!
+        nw.writeFully(nw.size(), encodeName(nt, v))
+        val id = names[nt].size
+        names[nt].add(v)
+        maps[nt][v] = id
+        return id
+    }
+
+    /** Eintrag der Namensdatei: Länge und Typ als Varint, dann der Text in UTF-8. */
+    private fun encodeName(nt: Int, v: String): ByteArray {
         val bytes = v.toByteArray(Charsets.UTF_8)
         val out = ByteArrayOutputStream()
         var x = (bytes.size.toLong() shl 3) or nt.toLong()
         while (x >= 128) { out.write(((x and 127) or 128).toInt()); x = x ushr 7 }
         out.write(x.toInt())
         out.write(bytes)
-        val nw = namesWrite!!
-        nw.writeFully(nw.size(), out.toByteArray())
-        val id = names[nt].size
-        names[nt].add(v)
-        maps[nt][v] = id
-        return id
+        return out.toByteArray()
     }
 
     /** Speichert Namen und Partiedaten; liefert den fertigen Indexeintrag. */
@@ -290,6 +295,57 @@ class Scid5Database private constructor(
         sync()
     }
 
+    /**
+     * Schreibt eine komprimierte Kopie nach [out]: ohne zum Löschen markierte Partien, ohne ungenutzten
+     * Platz in der Partiedatei und ohne Namen, die keine Partie mehr verwendet. Die Partiedaten werden
+     * unverändert übernommen. Liefert die Indizes der entfernten Partien.
+     */
+    @Synchronized
+    fun compactTo(out: DbFileSet): List<Int> {
+        val removed = ArrayList<Int>()
+        val newNames = Array(4) { ArrayList<String>() }
+        val idMaps = Array(4) { HashMap<Int, Int>() }
+        fun remap(nt: Int, id: Int) = idMaps[nt].getOrPut(id) { newNames[nt].add(name(nt, id)); newNames[nt].size - 1 }
+        out.openWrite("sg5").use { gw ->
+            out.openWrite("si5").use { iw ->
+                gw.truncate(0)
+                iw.truncate(0)
+                var size = 0L
+                var n = 0
+                for (i in 0 until count) {
+                    val ie = entry(i)
+                    if (ie.flags and FLAG_DELETE != 0) { removed.add(i); continue }
+                    val data = gameRead.readFully(ie.offset, ie.length)
+                    val blockSpace = BLOCK - (size % BLOCK)
+                    if (blockSpace < data.size) {
+                        gw.writeFully(size, ByteArray(blockSpace.toInt()))
+                        size += blockSpace
+                    }
+                    gw.writeFully(size, data)
+                    ie.offset = size
+                    size += data.size
+                    ie.white = remap(NAME_PLAYER, ie.white)
+                    ie.black = remap(NAME_PLAYER, ie.black)
+                    ie.event = remap(NAME_EVENT, ie.event)
+                    ie.site = remap(NAME_SITE, ie.site)
+                    ie.round = remap(NAME_ROUND, ie.round)
+                    iw.writeFully(n.toLong() * ENTRY_SIZE, encodeEntry(ie))
+                    n++
+                }
+                gw.force(false)
+                iw.force(false)
+            }
+        }
+        out.openWrite("sn5").use { nw ->
+            nw.truncate(0)
+            val buf = ByteArrayOutputStream()
+            for (nt in 0 until 4) for (v in newNames[nt]) buf.write(encodeName(nt, v))
+            nw.writeFully(0, buf.toByteArray())
+            nw.force(false)
+        }
+        return removed
+    }
+
     override fun close() {
         gameRead.close()
         gameWrite?.close()
@@ -301,7 +357,28 @@ class Scid5Database private constructor(
         const val ENTRY_SIZE = 56
         private const val BLOCK = 1L shl 17
 
+        val EXTS = listOf("si5", "sg5", "sn5")
+
         fun open(files: DbFileSet, writable: Boolean) = Scid5Database(files, writable)
+
+        /**
+         * Komprimiert die Datenbank [files] (siehe [compactTo]). Die Datenbank darf dabei nicht geöffnet sein.
+         * Die Kopie entsteht als „name.neu“; erst wenn sie vollständig ist, wird das Original zu „name.alt“
+         * umbenannt, die Kopie zu „name“ und das Original gelöscht. Bei einem Abbruch liegt also immer
+         * eine vollständige Datenbank im Ordner. Liefert die Indizes der entfernten Partien.
+         */
+        fun compact(files: DbFileSet): List<Int> {
+            val base = files.baseName
+            val tmp = files.sibling("$base.neu")
+            // Reste eines abgebrochenen Laufs; das Original ist vollständig vorhanden
+            tmp.delete(EXTS)
+            files.sibling("$base.alt").delete(EXTS)
+            val removed = open(files, false).use { it.compactTo(tmp) }
+            files.rename("$base.alt", EXTS)
+            tmp.rename(base, EXTS)
+            files.delete(EXTS)
+            return removed
+        }
 
         /** Legt eine leere Datenbank an (alle drei Dateien dürfen noch nicht existieren). */
         fun create(files: DbFileSet): Scid5Database {

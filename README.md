@@ -22,8 +22,10 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
 2. Datenbank antippen, um die Partieliste zu sehen. Das Suchfeld durchsucht Spieler, Turnier, Ort, Datum, ECO und Runde.
    Langes Drücken auf eine Partie öffnet ein Menü: Löschmarkierung setzen oder entfernen, oder die Partie
    endgültig löschen (nur Scid 5). Das Menü (⋮) der Partieliste löscht alle markierten Partien auf einmal.
-   Gelöschte Partien verschwinden aus dem Index; ihre Daten bleiben bis zum Komprimieren in Scid
-   ungenutzt in der `.sg5`-Datei.
+   Gelöschte Partien verschwinden aus dem Index; ihre Daten bleiben bis zum Komprimieren ungenutzt in der
+   `.sg5`-Datei. **Datenbank komprimieren** (ebenfalls im Menü) entfernt die markierten Partien, ungenutzten
+   Platz und nicht mehr verwendete Namen. Dabei entsteht zuerst eine vollständige Kopie (`name.neu`); erst
+   danach wird das Original ersetzt, so dass bei einem Abbruch immer eine vollständige Datenbank übrig bleibt.
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
      Weicht der Zug von der Partie ab, entsteht eine Variante.

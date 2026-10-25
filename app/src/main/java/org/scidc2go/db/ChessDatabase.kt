@@ -73,15 +73,35 @@ interface DbFileSet {
     fun openRead(ext: String): FileChannel
     /** Öffnet zum Schreiben ohne Kürzen; legt die Datei bei Bedarf an. */
     fun openWrite(ext: String): FileChannel
+
+    /** Dateien einer anderen Datenbank [baseName] im selben Ordner. */
+    fun sibling(baseName: String): DbFileSet = throw IOException("Kein Ordnerzugriff")
+    /** Benennt die vorhandenen Dateien mit den Endungen [exts] auf den Basisnamen [newBase] um. */
+    fun rename(newBase: String, exts: Collection<String>): Unit = throw IOException("Kein Ordnerzugriff")
+    /** Löscht die vorhandenen Dateien mit den Endungen [exts]. */
+    fun delete(exts: Collection<String>): Unit = throw IOException("Kein Ordnerzugriff")
 }
 
-class JavaFileSet(private val dir: java.io.File, override val baseName: String) : DbFileSet {
+class JavaFileSet(private val dir: java.io.File, baseName: String) : DbFileSet {
+    override var baseName = baseName
+        private set
     private fun file(ext: String) = java.io.File(dir, "$baseName.$ext")
     override fun exists(ext: String) = file(ext).exists()
     override fun openRead(ext: String): FileChannel =
         java.io.RandomAccessFile(file(ext), "r").channel
     override fun openWrite(ext: String): FileChannel =
         java.io.RandomAccessFile(file(ext), "rw").channel
+    override fun sibling(baseName: String) = JavaFileSet(dir, baseName)
+    override fun rename(newBase: String, exts: Collection<String>) {
+        for (ext in exts) {
+            val f = file(ext)
+            if (f.exists() && !f.renameTo(java.io.File(dir, "$newBase.$ext"))) throw IOException("Kann ${f.name} nicht umbenennen")
+        }
+        baseName = newBase
+    }
+    override fun delete(exts: Collection<String>) {
+        for (ext in exts) file(ext).let { if (it.exists() && !it.delete()) throw IOException("Kann ${it.name} nicht löschen") }
+    }
 }
 
 internal fun FileChannel.readFully(offset: Long, length: Int): ByteArray {

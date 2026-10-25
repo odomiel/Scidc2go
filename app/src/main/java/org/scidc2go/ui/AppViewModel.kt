@@ -78,6 +78,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var db by mutableStateOf<ChessDatabase?>(null)
         private set
     private var dbEntry: DbEntry? = null
+    /** Freigegebener Ordner, aus dem [dbEntry] stammt. */
+    private var dbTree: Uri? = null
     var filterText by mutableStateOf("")
         private set
     var filtered by mutableStateOf(IntArray(0))
@@ -169,7 +171,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
                 }
             }
-            setDatabase(newDb, entry)
+            setDatabase(newDb, entry, uri)
         }
     }
 
@@ -181,7 +183,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     busy = "Lese $name … ${(p * 100).toInt()} %"
                 }
             }
-            setDatabase(newDb, null)
+            setDatabase(newDb, null, null)
         }
     }
 
@@ -251,7 +253,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
             }
         }
-        setDatabase(newDb, if (tree != null) entry else null)
+        setDatabase(newDb, if (tree != null) entry else null, tree)
     }
 
     private fun queryName(uri: Uri): String? =
@@ -259,10 +261,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (it.moveToFirst()) it.getString(0) else null
         }
 
-    private fun setDatabase(newDb: ChessDatabase, entry: DbEntry?) {
+    private fun setDatabase(newDb: ChessDatabase, entry: DbEntry?, tree: Uri?) {
         db?.close()
         db = newDb
         dbEntry = entry
+        dbTree = tree
         filterText = ""
         filtered = IntArray(newDb.gameCount) { it }
         listVersion++
@@ -273,6 +276,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         db?.close()
         db = null
         dbEntry = null
+        dbTree = null
         filtered = IntArray(0)
         screen = Screen.FILES
     }
@@ -530,17 +534,74 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (indices.isEmpty()) return
         runBusy("Lösche ${indices.size} Partie(n) …") {
             withContext(Dispatchers.IO) { d.deleteGames(indices) }
-            // die offene Partie gehört nicht mehr zur Datenbank oder ist nach vorn gerückt
-            if (gameIndex in indices) {
-                gameIndex = -1
-                dirty = true
-            } else if (gameIndex >= 0) {
-                gameIndex -= indices.count { it < gameIndex }
-            }
+            gamesRemoved(indices)
             message = if (indices.size == 1) "Partie gelöscht" else "${indices.size} Partien gelöscht"
             search(filterText)
             refreshFolder()
         }
+    }
+
+    /** Die offene Partie gehört nach dem Entfernen von [indices] nicht mehr zur Datenbank oder rückt nach vorn. */
+    private fun gamesRemoved(indices: Collection<Int>) {
+        if (gameIndex in indices) {
+            gameIndex = -1
+            dirty = true
+        } else if (gameIndex >= 0) {
+            gameIndex -= indices.count { it < gameIndex }
+        }
+    }
+
+    /** Anzahl der markierten Partien, wenn eine Rückfrage zum Komprimieren offen ist (sonst null). */
+    var compactRequest by mutableStateOf<Int?>(null)
+        private set
+
+    /** Komprimieren geht nur bei Scid 5 aus einem freigegebenen Ordner. */
+    val canCompact get() = db?.writable == true && dbEntry?.format == DbFormat.SCID5 && dbTree != null
+
+    fun requestCompact() {
+        val d = db ?: return
+        if (!canCompact) {
+            message = "Komprimieren geht nur bei Scid-5-Datenbanken aus einem freigegebenen Ordner"
+            return
+        }
+        runBusy("Zähle markierte Partien …") {
+            compactRequest = withContext(Dispatchers.IO) { (0 until d.gameCount).count { d.header(it).deleted } }
+        }
+    }
+
+    fun cancelCompact() { compactRequest = null }
+
+    fun confirmCompact() {
+        compactRequest = null
+        val d = db ?: return
+        val entry = dbEntry ?: return
+        val tree = dbTree ?: return
+        runBusy("Komprimiere ${entry.baseName} …") {
+            val before = entry.size
+            d.close()
+            val (removed, fresh) = try {
+                withContext(Dispatchers.IO) { SafStorage.compactScid5(ctx, tree, entry) }
+            } catch (e: Exception) {
+                // Original oder Kopie liegt vollständig im Ordner; die Liste zeigt, was vorhanden ist
+                closeDatabase()
+                refreshFolder()
+                throw e
+            }
+            val newDb = withContext(Dispatchers.IO) { SafStorage.open(ctx, tree, fresh, writable = true) {} }
+            db = newDb
+            dbEntry = fresh
+            gamesRemoved(removed)
+            message = "Komprimiert: ${formatBytes(before)} → ${formatBytes(fresh.size)}" +
+                if (removed.isNotEmpty()) ", ${removed.size} markierte Partie(n) entfernt" else ""
+            search(filterText)
+            refreshFolder()
+        }
+    }
+
+    private fun formatBytes(b: Long) = when {
+        b >= 1L shl 20 -> String.format("%.1f MB", b / (1L shl 20).toDouble())
+        b >= 1L shl 10 -> String.format("%.0f KB", b / 1024.0)
+        else -> "$b B"
     }
 
     fun pgnText(): String = game?.let { Pgn.write(it) } ?: ""

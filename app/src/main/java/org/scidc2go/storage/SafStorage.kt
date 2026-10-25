@@ -40,12 +40,16 @@ enum class DbFormat(val label: String, val mainExt: String, val exts: List<Strin
     PGN("PGN", "pgn", listOf("pgn")),
 }
 
-/** Eine Datenbank in einem Ordner: Basisname + Format + Dokument-URIs ihrer Dateien. */
+/**
+ * Eine Datenbank in einem Ordner: Basisname + Format + Dokument-URIs ihrer Dateien.
+ * [folderId] ist die Dokument-ID des Ordners im freigegebenen Baum (null bei einzeln ausgewählten Dateien).
+ */
 data class DbEntry(
     val baseName: String,
     val format: DbFormat,
     val files: Map<String, Uri>,
     val size: Long,
+    val folderId: String? = null,
 ) {
     val complete get() = format.exts.all { files.containsKey(it) }
 }
@@ -61,15 +65,18 @@ private fun openChannel(ctx: Context, uri: Uri, write: Boolean): FileChannel {
 }
 
 /**
- * Dateien einer Datenbank in einem per SAF freigegebenen Ordner.
- * Ohne [treeUri] (einzeln ausgewählte Dateien) können keine neuen Dateien angelegt werden.
+ * Dateien einer Datenbank im Ordner [folderId] eines per SAF freigegebenen Baums (null = oberster Ordner).
+ * Ohne [treeUri] (einzeln ausgewählte Dateien) können keine Dateien angelegt, umbenannt oder gelöscht werden.
  */
 class SafFileSet(
     private val ctx: Context,
     private val treeUri: Uri?,
-    override val baseName: String,
+    private val folderId: String?,
+    baseName: String,
     files: Map<String, Uri>,
 ) : DbFileSet {
+    override var baseName = baseName
+        private set
     private val files = files.toMutableMap()
 
     override fun exists(ext: String) = files.containsKey(ext)
@@ -84,13 +91,41 @@ class SafFileSet(
         return openChannel(ctx, uri, true)
     }
 
+    private fun tree() = treeUri ?: throw IOException("Kein Ordnerzugriff: bitte den Ordner der Datenbank freigeben")
+
     private fun createFile(ext: String): Uri {
-        val treeUri = treeUri ?: throw IOException("$baseName.$ext fehlt")
-        val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
+        val tree = treeUri ?: throw IOException("$baseName.$ext fehlt")
+        val parent = DocumentsContract.buildDocumentUriUsingTree(tree, folderId ?: DocumentsContract.getTreeDocumentId(tree))
         val uri = DocumentsContract.createDocument(ctx.contentResolver, parent, "application/octet-stream", "$baseName.$ext")
             ?: throw IOException("Kann $baseName.$ext nicht anlegen")
         files[ext] = uri
         return uri
+    }
+
+    override fun sibling(baseName: String): DbFileSet {
+        val tree = tree()
+        val folder = folderId ?: DocumentsContract.getTreeDocumentId(tree)
+        val existing = SafStorage.listDatabases(ctx, tree, folder).filter { it.baseName == baseName }
+            .flatMap { it.files.entries }.associate { it.key to it.value }
+        return SafFileSet(ctx, tree, folder, baseName, existing)
+    }
+
+    override fun rename(newBase: String, exts: Collection<String>) {
+        tree()
+        for (ext in exts) {
+            val uri = files[ext] ?: continue
+            files[ext] = DocumentsContract.renameDocument(ctx.contentResolver, uri, "$newBase.$ext")
+                ?: throw IOException("Kann $baseName.$ext nicht umbenennen")
+        }
+        baseName = newBase
+    }
+
+    override fun delete(exts: Collection<String>) {
+        tree()
+        for (ext in exts) {
+            val uri = files.remove(ext) ?: continue
+            if (!DocumentsContract.deleteDocument(ctx.contentResolver, uri)) throw IOException("Kann $baseName.$ext nicht löschen")
+        }
     }
 }
 
@@ -119,7 +154,7 @@ object SafStorage {
                 docs.add(Triple(name, size, DocumentsContract.buildDocumentUriUsingTree(treeUri, c.getString(0))))
             }
         }
-        return group(docs)
+        return group(docs).map { it.copy(folderId = docId) }
     }
 
     /**
@@ -188,7 +223,7 @@ object SafStorage {
     }
 
     fun open(ctx: Context, treeUri: Uri?, entry: DbEntry, writable: Boolean, progress: (Float) -> Unit): ChessDatabase {
-        val fs = SafFileSet(ctx, treeUri, entry.baseName, entry.files)
+        val fs = SafFileSet(ctx, treeUri, entry.folderId, entry.baseName, entry.files)
         return when (entry.format) {
             DbFormat.SCID5 -> Scid5Database.open(fs, writable)
             DbFormat.SCID4 -> Scid4Database(fs)
@@ -199,7 +234,19 @@ object SafStorage {
     }
 
     fun createScid5(ctx: Context, treeUri: Uri, baseName: String): Scid5Database =
-        Scid5Database.create(SafFileSet(ctx, treeUri, baseName, emptyMap()))
+        Scid5Database.create(SafFileSet(ctx, treeUri, null, baseName, emptyMap()))
+
+    /**
+     * Komprimiert die Scid-5-Datenbank [entry] (siehe [Scid5Database.compact]) und liefert die
+     * Indizes der entfernten Partien sowie den neuen Eintrag der Datenbank.
+     */
+    fun compactScid5(ctx: Context, treeUri: Uri, entry: DbEntry): Pair<List<Int>, DbEntry> {
+        val removed = Scid5Database.compact(SafFileSet(ctx, treeUri, entry.folderId, entry.baseName, entry.files))
+        val folder = entry.folderId ?: DocumentsContract.getTreeDocumentId(treeUri)
+        val fresh = listDatabases(ctx, treeUri, folder).firstOrNull { it.baseName == entry.baseName && it.format == entry.format }
+            ?: throw IOException("${entry.baseName} nach dem Komprimieren nicht gefunden")
+        return removed to fresh
+    }
 
     /** Öffnet eine einzelne PGN-Datei (z.B. aus "Öffnen mit"). */
     fun openPgn(ctx: Context, uri: Uri, name: String, progress: (Float) -> Unit): ChessDatabase =

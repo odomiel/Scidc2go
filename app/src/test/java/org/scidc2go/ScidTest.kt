@@ -1,6 +1,7 @@
 package org.scidc2go
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.scidc2go.chess.Game
 import org.scidc2go.chess.Move
@@ -145,5 +146,41 @@ class ScidTest {
             assertEquals(0, db.gameCount)
         }
         assertEquals(0L, File(dir, "del.si5").length())
+    }
+
+    @Test fun compactScid5() {
+        val dir = createTempDirectory().toFile()
+        val rnd = Random(11)
+        val list = ArrayList<Game>()
+        Scid5Database.create(JavaFileSet(dir, "kp")).use { db ->
+            repeat(40) { list.add(randomGame(rnd).also { g -> db.addGame(g) }) }
+            // ungenutzter Platz durch Ersetzen und Löschen, Namen nur in gelöschten Partien
+            repeat(5) { i -> val g = randomGame(rnd); db.replaceGame(i * 3, g); list[i * 3] = g }
+            val lonely = randomGame(rnd).apply { white = "Nur hier"; event = "Einmalig" }
+            db.addGame(lonely)
+            db.deleteGames(listOf(db.gameCount - 1, 20))
+            list.removeAt(20)
+            for (i in listOf(1, 7, 30)) db.setDeleted(i, true)
+        }
+        // eine andere Datenbank mit gleichem Basisnamen darf nicht berührt werden
+        File(dir, "kp.pgn").writeText("[Event \"x\"]\n\n*\n")
+        val sizeBefore = File(dir, "kp.sg5").length()
+        val namesBefore = File(dir, "kp.sn5").length()
+        val removed = Scid5Database.compact(JavaFileSet(dir, "kp"))
+        assertEquals(listOf(1, 7, 30), removed)
+        for (i in removed.reversed()) list.removeAt(i)
+        Scid5Database.open(JavaFileSet(dir, "kp"), false).use { re ->
+            assertEquals(list.size, re.gameCount)
+            for (i in list.indices) {
+                assertEquals("Partie $i", Pgn.write(list[i]), Pgn.write(re.loadGame(i)))
+                assertEquals(false, re.header(i).deleted)
+            }
+        }
+        assertTrue(File(dir, "kp.sg5").length() < sizeBefore)
+        assertTrue(File(dir, "kp.sn5").length() < namesBefore)
+        assertEquals(setOf("kp.si5", "kp.sg5", "kp.sn5", "kp.pgn"), dir.list()!!.toSet())
+        // weiter beschreibbar
+        Scid5Database.open(JavaFileSet(dir, "kp"), true).use { it.addGame(list[0]) }
+        Scid5Database.open(JavaFileSet(dir, "kp"), false).use { assertEquals(list.size + 1, it.gameCount) }
     }
 }
