@@ -98,6 +98,7 @@
 
     <!-- Brett -->
     <string name="modified">geändert</string>
+    <string name="game_info">Partiedaten</string>
     <string name="analysis_menu">Analyse (%1$s)</string>
     <string name="show_comments">Kommentare anzeigen</string>
     <string name="show_variations">Varianten anzeigen</string>

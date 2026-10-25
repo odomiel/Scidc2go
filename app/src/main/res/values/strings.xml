@@ -108,6 +108,7 @@
 
     <!-- Brett -->
     <string name="modified">modified</string>
+    <string name="game_info">Game details</string>
     <string name="analysis_menu">Analysis (%1$s)</string>
     <string name="show_comments">Show comments</string>
     <string name="show_variations">Show variations</string>

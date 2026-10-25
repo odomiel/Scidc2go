@@ -58,6 +58,8 @@ import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
@@ -609,7 +611,7 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
     var saveDialog by remember { mutableStateOf(false) }
     var commentDialog by remember { mutableStateOf(false) }
     var pasteDialog by remember { mutableStateOf(false) }
-    /** Titel in voller Länge unter der Kopfleiste zeigen (Antippen des Titels). */
+    /** Titel in voller Länge unter der Kopfleiste zeigen (Symbol in der Kopfleiste). */
     var titleOpen by remember { mutableStateOf(false) }
     val title = "${game.white} – ${game.black}"
     val subtitle = listOf(game.event, game.date, game.result).filter { it != "?" }.joinToString(" · ") +
@@ -619,9 +621,8 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
         topBar = { Column {
             TopAppBar(
                 title = {
-                    Column(Modifier.clickable { titleOpen = !titleOpen }) {
-                        Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium)
-                        Text(subtitle, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    IconButton({ titleOpen = !titleOpen }) {
+                        Icon(if (titleOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, stringResource(R.string.game_info))
                     }
                 },
                 navigationIcon = {
