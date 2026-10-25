@@ -14,8 +14,8 @@ android {
         // Stockfish wird fuer Android API 29 gebaut
         minSdk = 29
         targetSdk = 35
-        versionCode = 14
-        versionName = "0.9.0"
+        versionCode = 15
+        versionName = "0.10.0"
     }
 
     // Signierschlüssel für Release-Builds: keystore.properties (nicht im Repository)
