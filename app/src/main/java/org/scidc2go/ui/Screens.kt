@@ -769,10 +769,12 @@ private fun SaveDialog(vm: AppViewModel, onDismiss: () -> Unit) {
                     TextButton({ onDismiss(); vm.save(asNew = true) }) { Text("Als neue Partie in ${vm.db?.name}") }
                     HorizontalDivider()
                 }
-                Text("In Scid-5-Datenbank:", Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
+                Text("In Datenbank:", Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
                 if (vm.folderUri == null) Text("Kein Ordner gewählt.")
                 for (e: DbEntry in vm.writableTargets) {
-                    TextButton({ onDismiss(); vm.saveTo(e) }) { Text(e.baseName) }
+                    TextButton({ onDismiss(); vm.saveTo(e) }) {
+                        Text(if (e.format == DbFormat.SCID5) e.baseName else "${e.baseName} (${e.format.label})")
+                    }
                 }
                 if (vm.folderUri != null) {
                     TextButton({ newName = "" }) {

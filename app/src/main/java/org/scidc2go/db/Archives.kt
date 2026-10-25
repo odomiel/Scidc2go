@@ -266,10 +266,13 @@ class ArchiveDatabase(
     private val inner: ChessDatabase,
     private val dir: File,
     override val name: String,
-    archiveFormat: String,
+    /** Art des Archivs, z.B. „Scidb-Archiv“. */
+    val archiveFormat: String,
     private val repack: ((ChessDatabase) -> Unit)? = null,
 ) : ChessDatabase by inner {
     override val formatName = "${inner.formatName}, $archiveFormat"
+    /** Format der Datenbank im Archiv, z.B. „Scid 4“. */
+    val contentFormat get() = inner.formatName
     override val writable get() = repack != null
 
     private fun <T> changed(op: () -> T): T = op().also { repack?.invoke(inner) }

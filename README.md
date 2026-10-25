@@ -25,7 +25,8 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    wird die entpackte Kopie gelöscht. Aus einem ZIP-Archiv werden alle PGN-Dateien hintereinander gelesen, wie in
    Scidb. Ein Scidb-Archiv mit einer Scid-5-Datenbank darin lässt sich bearbeiten: Nach jeder Änderung schreibt die
    App das Archiv neu (zuerst als `name.neu.scv`, dann wird das alte ersetzt). Alle anderen gepackten Datenbanken
-   sind schreibgeschützt.
+   sind schreibgeschützt; ein Scidb-Archiv mit z.B. Scid 4 darin lässt sich mit **In Scidb-Archiv umwandeln** in ein
+   bearbeitbares überführen.
 2. Datenbank antippen, um die Partieliste zu sehen. Das Suchfeld durchsucht Spieler, Turnier, Ort, Datum, ECO und Runde.
    Langes Drücken auf eine Partie öffnet ein Menü: Löschmarkierung setzen oder entfernen, oder die Partie
    endgültig löschen (nur Scid 5). Das Menü (⋮) der Partieliste löscht alle markierten Partien auf einmal.

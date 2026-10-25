@@ -42,6 +42,7 @@ import org.scidc2go.chess.WHITE
 import org.scidc2go.chess.parseSquare
 import org.scidc2go.chess.rankOf
 import org.scidc2go.chess.typeOf
+import org.scidc2go.db.ArchiveDatabase
 import org.scidc2go.db.ChessDatabase
 import org.scidc2go.db.Scid5Database
 import org.scidc2go.engine.EngineLine
@@ -452,6 +453,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         treeVersion++
     }
 
+    /** Meldung, warum [d] schreibgeschützt ist, mit Hinweis, wie man sie bearbeitbar macht. */
+    private fun readOnlyReason(d: ChessDatabase): String = when {
+        d is ArchiveDatabase && d.archiveFormat == DbFormat.SCIDB_ARCHIVE.label ->
+            "${d.name}.scv enthält eine ${d.contentFormat.replace(' ', '-')}-Datenbank und ist nur lesbar; " +
+                "zum Bearbeiten in ein Scidb-Archiv umwandeln"
+        d is ArchiveDatabase -> "${d.name} ist gepackt und nur lesbar; zum Bearbeiten in Scid 5 konvertieren"
+        else -> "Diese Datenbank ist schreibgeschützt"
+    }
+
     val writableTargets get() = dbEntries.filter { it.format.writable }
     val canSaveInPlace get() = db?.writable == true
 
@@ -459,7 +469,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun save(asNew: Boolean = false) {
         val d = db ?: return
         val g = game ?: return
-        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
+        if (!d.writable) { message = readOnlyReason(d); return }
         runBusy("Speichere …") {
             val idx = withContext(Dispatchers.IO) {
                 if (gameIndex >= 0 && !asNew) { d.replaceGame(gameIndex, g); gameIndex } else d.addGame(g)
@@ -479,7 +489,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (entry == dbEntry && db?.writable == true) { save(asNew = true); return }
         runBusy("Speichere in ${entry.baseName} …") {
             val idx = withContext(Dispatchers.IO) {
-                SafStorage.open(ctx, uri, entry, writable = true) {}.use { it.addGame(g) }
+                SafStorage.open(ctx, uri, entry, writable = true) {}.use {
+                    if (!it.writable) throw java.io.IOException(readOnlyReason(it))
+                    it.addGame(g)
+                }
             }
             message = "In ${entry.baseName} gespeichert (Partie ${idx + 1})"
             refreshFolder()
@@ -501,7 +514,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleDeleted(index: Int) {
         val d = db ?: return
-        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
+        if (!d.writable) { message = readOnlyReason(d); return }
         runBusy("Ändere Löschmarkierung …") {
             withContext(Dispatchers.IO) { d.setDeleted(index, !d.header(index).deleted) }
             listVersion++
@@ -514,7 +527,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun requestDelete(indices: List<Int>) {
         val d = db ?: return
-        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
+        if (!d.writable) { message = readOnlyReason(d); return }
         deleteRequest = indices
     }
 
@@ -616,7 +629,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (convertTarget() == null) return false
         return when (format) {
             DbFormat.SCID5 -> d !is Scid5Database
-            else -> dbEntry?.format != format
+            // ein nur lesbares Archiv lässt sich in ein bearbeitbares umwandeln
+            else -> dbEntry?.format != format || !d.writable
         }
     }
 
