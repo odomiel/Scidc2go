@@ -117,6 +117,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.input.KeyboardType
 import org.scidc2go.R
 import org.scidc2go.chess.Game
+import org.scidc2go.chess.Opening
 import org.scidc2go.engine.StockfishNet
 import org.scidc2go.storage.DbEntry
 
@@ -432,6 +433,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 Text(stringResource(R.string.about_formats))
                 Text("• AndroidX / Jetpack Compose – Apache 2.0")
                 Text("• Apache Commons Compress – Apache 2.0, XZ for Java – 0BSD")
+                Text(stringResource(R.string.about_openings))
             }
         },
         confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.ok)) } },
@@ -616,6 +618,12 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
     val title = "${game.white} – ${game.black}"
     val subtitle = listOf(game.event, game.date, game.result).filter { it != "?" }.joinToString(" · ") +
         if (vm.dirty) " · " + stringResource(R.string.modified) else ""
+    val openings = vm.openings
+    val opening = remember(node, vm.treeVersion, openings) { openings?.lookup(node) }
+    // Eröffnung der ganzen Partie; ohne Treffer der ECO-Code aus den Partiedaten
+    val gameOpening = remember(game, vm.treeVersion, openings) {
+        openings?.lookupGame(game)?.toString() ?: game.tags["ECO"]?.takeIf { it.isNotBlank() && it != "?" }
+    }
 
     Scaffold(
         topBar = { Column {
@@ -694,6 +702,9 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                 ) {
                     Text(title, style = MaterialTheme.typography.titleMedium)
                     Text(subtitle, style = MaterialTheme.typography.labelMedium)
+                    gameOpening?.let {
+                        Text(stringResource(R.string.opening_of_game, it), style = MaterialTheme.typography.labelMedium)
+                    }
                 }
                 HorizontalDivider()
             }
@@ -720,6 +731,7 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                     Column(Modifier.fillMaxHeight().width(boardMax)) {
                         board(Modifier.weight(1f, fill = false))
                         NavBar(vm)
+                        OpeningLine(opening)
                     }
                     // Im Querformat ist über dem Brett kein Platz: Analyse oben neben dem Brett
                     Column(Modifier.weight(1f).fillMaxHeight()) {
@@ -736,6 +748,7 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                     EnginePanel(vm)
                     board(Modifier.fillMaxWidth())
                     NavBar(vm)
+                    OpeningLine(opening)
                     HorizontalDivider()
                     MoveListView(
                         game, node, vm.treeVersion, { vm.goTo(it) }, Modifier.weight(1f).fillMaxWidth(),
@@ -769,6 +782,17 @@ private fun NavBar(vm: AppViewModel) {
         IconButton({ vm.toEnd() }) { Icon(Icons.Default.SkipNext, stringResource(R.string.nav_end)) }
         IconButton({ vm.flipped = !vm.flipped }) { Icon(Icons.Default.SwapVert, stringResource(R.string.flip_board)) }
     }
+}
+
+/** Eröffnung der aktuellen Stellung; die Zeile bleibt auch ohne Treffer stehen, damit die Zugliste nicht springt. */
+@Composable
+private fun OpeningLine(opening: Opening?) {
+    Text(
+        opening?.let { "${it.eco}  ${it.name}" } ?: "",
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        minLines = 1, maxLines = 2, overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable

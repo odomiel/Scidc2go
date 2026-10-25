@@ -73,6 +73,7 @@
     <string name="about_license">Free software under the GNU General Public License, version 3 or later. No warranty. Source code and license text come with the project.</string>
     <string name="about_components">Included free components:</string>
     <string name="about_pieces">• Chess pieces “cburnett” by Colin M.L. Burnett – GPLv2+</string>
+    <string name="about_openings">• Opening names: lichess-org/chess-openings – CC0</string>
     <string name="about_formats">• Database formats based on the source code of Scid (GPL) and Scidb (GPL)</string>
 
     <!-- Partieliste -->
@@ -109,6 +110,7 @@
     <!-- Brett -->
     <string name="modified">modified</string>
     <string name="game_info">Game details</string>
+    <string name="opening_of_game">Opening: %s</string>
     <string name="analysis_menu">Analysis (%1$s)</string>
     <string name="show_comments">Show comments</string>
     <string name="show_variations">Show variations</string>

@@ -45,6 +45,7 @@ import org.scidc2go.R
 import org.scidc2go.chess.Game
 import org.scidc2go.chess.Move
 import org.scidc2go.chess.Node
+import org.scidc2go.chess.Openings
 import org.scidc2go.chess.PAWN
 import org.scidc2go.chess.Pgn
 import org.scidc2go.chess.Position
@@ -125,6 +126,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var dirty by mutableStateOf(false)
         private set
     var flipped by mutableStateOf(false)
+    /** Eröffnungstabelle, im Hintergrund geladen; bis dahin null. */
+    var openings by mutableStateOf<Openings?>(null)
+        private set
 
     // Engine
     var engineOn by mutableStateOf(false)
@@ -148,8 +152,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         AppLog.detailed = prefs.getBoolean("logDetailed", false)
         SafStorage.cleanArchives(ctx)
         refreshEngines()
+        loadOpenings()
         folderUri?.let { refreshFolder() }
         newGame()
+    }
+
+    private fun loadOpenings() {
+        viewModelScope.launch {
+            try {
+                openings = withContext(Dispatchers.IO) { ctx.assets.open("openings.tsv").use { Openings.load(it) } }
+            } catch (e: Exception) {
+                AppLog.e("Eröffnungen", "Tabelle nicht lesbar", e)
+            }
+        }
     }
 
     // ------------------------------------------------------------------

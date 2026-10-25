@@ -11,7 +11,7 @@ Chess databases on the go: a lean Android app for phones and tablets.
   any database can also be packed as `.sc7`
 - **Analysis:** Stockfish 19 is built in (NNUE, 1–5 lines). The app downloads the network (98 MB) once from
   stockfishchess.org when analysis is first switched on; that is the only reason it needs internet permission.
-- **Views:** database list with search, and a board view with move list, variations, comments and annotation symbols.
+- **Views:** database list with search, and a board view with move list, variations, comments, annotation symbols and opening names.
   On tablets (840 dp wide and more) the game list and the board are shown side by side.
 - **Languages:** English and German, following the system language or chosen in the settings.
 
@@ -52,6 +52,9 @@ Free software under the GNU GPL version 3 or later (see `COPYING`), with no prop
    - Entering moves: drag a piece to its target square (or tap the piece and then the target square).
      If the move differs from the game, a variation is created.
    - Tapping a move in the move list jumps to that position.
+   - Below the board, the ECO code and name of the current position's opening are shown (transpositions
+     included). The arrow icon next to the back arrow expands players, event, date, result and the opening of
+     the game. The names come from the Lichess opening table and are in English.
    - **Analysis** in the menu (⋮) starts the selected engine. Its lines are shown above the board (beside it in
      landscape); tapping a line plays its first move.
    - **Show comments** and **Show variations** in the menu hide comments or variations in the move list
@@ -81,6 +84,7 @@ tools/build-apk.sh              # build the current APK (with tests) and copy it
 ./gradlew assembleRelease       # APK: app/build/outputs/apk/release/
 ./gradlew testDebugUnitTest     # unit tests
 tools/check-deps.py             # newer versions and known vulnerabilities of the dependencies
+tools/update-openings.sh        # fetch the Lichess opening table again (assets/openings.tsv)
 ```
 
 Before the first release of a day, `tools/check-deps.py` checks the external dependencies
@@ -135,3 +139,4 @@ The user interface texts are in `app/src/main/res/values/strings.xml` (English, 
 | AndroidX, Jetpack Compose, Kotlin | Apache 2.0 |
 | Apache Commons Compress (with Commons IO, Lang, Codec) | Apache 2.0 |
 | XZ for Java | 0BSD |
+| Opening names from Lichess (github.com/lichess-org/chess-openings) | CC0 |

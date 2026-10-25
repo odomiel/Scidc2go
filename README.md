@@ -11,7 +11,7 @@ Schachdatenbanken unterwegs: eine schlanke Android-App für Smartphone und Table
   außerdem jede Datenbank als `.sc7` packen
 - **Analyse:** Stockfish 19 ist eingebaut (NNUE, 1–5 Varianten). Das Netz (98 MB) lädt die App beim ersten
   Einschalten der Analyse einmalig von stockfishchess.org; nur dafür braucht sie die Internet-Berechtigung.
-- **Ansichten:** Datenbankliste mit Suche und Brettansicht mit Zugliste, Varianten, Kommentaren und Bewertungszeichen.
+- **Ansichten:** Datenbankliste mit Suche und Brettansicht mit Zugliste, Varianten, Kommentaren, Bewertungszeichen und Eröffnungsnamen.
   Auf Tablets (ab 840 dp Breite) stehen Partieliste und Brett nebeneinander.
 - **Sprachen:** Deutsch und Englisch, nach der Systemsprache oder in den Einstellungen wählbar.
 
@@ -52,6 +52,9 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
      Weicht der Zug von der Partie ab, entsteht eine Variante.
    - Ein Zug in der Zugliste springt zu dieser Stellung.
+   - Unter dem Brett stehen ECO-Code und Name der Eröffnung der aktuellen Stellung (auch nach Zugumstellung).
+     Das Pfeilsymbol neben dem Zurück-Pfeil klappt Spieler, Turnier, Datum, Ergebnis und die Eröffnung der
+     Partie aus. Die Namen stammen aus der Eröffnungstabelle von Lichess und sind englisch.
    - **Analyse** im Menü (⋮) startet die gewählte Engine. Ihre Varianten stehen über dem Brett (im Querformat
      daneben); ein Antippen einer Variante spielt deren ersten Zug.
    - **Kommentare anzeigen** und **Varianten anzeigen** im Menü blenden Kommentare bzw. Varianten in der Zugliste
@@ -82,6 +85,7 @@ tools/build-apk.sh              # aktuelle APK bauen (mit Tests) und nach dist/ 
 ./gradlew assembleRelease       # APK: app/build/outputs/apk/release/
 ./gradlew testDebugUnitTest     # Unit-Tests
 tools/check-deps.py             # neuere Versionen und bekannte Sicherheitslücken der Abhängigkeiten
+tools/update-openings.sh        # Eröffnungstabelle von Lichess neu holen (assets/openings.tsv)
 ```
 
 Vor dem ersten Release eines Tages werden mit `tools/check-deps.py` die externen Abhängigkeiten geprüft
@@ -135,3 +139,4 @@ Die Texte der Oberfläche stehen in `app/src/main/res/values/strings.xml` (Engli
 | AndroidX, Jetpack Compose, Kotlin | Apache 2.0 |
 | Apache Commons Compress (mit Commons IO, Lang, Codec) | Apache 2.0 |
 | XZ for Java | 0BSD |
+| Eröffnungsnamen von Lichess (github.com/lichess-org/chess-openings) | CC0 |
