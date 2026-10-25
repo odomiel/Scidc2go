@@ -728,6 +728,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ------------------------------------------------------------------
     // Einstellungen
 
+    /** Kommentare in der Zugliste anzeigen. */
+    var showComments by mutableStateOf(prefs.getBoolean("showComments", true))
+        private set
+    /** Varianten in der Zugliste anzeigen (die Variante mit dem aktuellen Zug bleibt immer sichtbar). */
+    var showVariations by mutableStateOf(prefs.getBoolean("showVariations", true))
+        private set
+
+    fun toggleComments() {
+        showComments = !showComments
+        prefs.edit().putBoolean("showComments", showComments).apply()
+    }
+
+    fun toggleVariations() {
+        showVariations = !showVariations
+        prefs.edit().putBoolean("showVariations", showVariations).apply()
+    }
+
     fun changeTheme(mode: ThemeMode) {
         themeMode = mode
         prefs.edit().putString("theme", mode.name).apply()

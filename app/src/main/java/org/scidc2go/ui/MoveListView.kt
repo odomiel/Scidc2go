@@ -47,7 +47,8 @@ import org.scidc2go.chess.WHITE
 
 /**
  * Zugliste als fließender Text mit Varianten in Klammern und Kommentaren.
- * Antippen eines Zuges springt zu dieser Stellung.
+ * Antippen eines Zuges springt zu dieser Stellung. Mit [showComments] bzw. [showVariations] = false
+ * werden Kommentare bzw. Varianten ausgeblendet; die Variante, in der [current] liegt, bleibt sichtbar.
  */
 @Composable
 fun MoveListView(
@@ -56,16 +57,21 @@ fun MoveListView(
     treeVersion: Int,
     onClick: (Node) -> Unit,
     modifier: Modifier = Modifier,
+    showComments: Boolean = true,
+    showVariations: Boolean = true,
 ) {
     val colors = MaterialTheme.colorScheme
     val highlight = colors.primaryContainer
     val varColor = colors.onSurfaceVariant
     val commentColor = Color(0xFF2E7D32)
-    val (text, currentOffset) = remember(game, treeVersion, current, colors) {
+    val (text, currentOffset) = remember(game, treeVersion, current, colors, showComments, showVariations) {
         var currentOffset = -1
+        // Züge auf dem Weg zum aktuellen Zug: deren Varianten werden auch ausgeblendet gezeigt
+        val path = HashSet<Node>()
+        generateSequence(current) { it.parent }.forEach { path.add(it) }
         val t: AnnotatedString = buildAnnotatedString {
             fun move(n: Node, depth: Int, forceNumber: Boolean) {
-                if (n.preComment.isNotEmpty()) {
+                if (showComments && n.preComment.isNotEmpty()) {
                     withStyle(SpanStyle(color = commentColor, fontStyle = FontStyle.Italic)) { append(n.preComment) }
                     append(' ')
                 }
@@ -91,7 +97,7 @@ fun MoveListView(
                     }
                 }
                 append(' ')
-                if (n.comment.isNotEmpty()) {
+                if (showComments && n.comment.isNotEmpty()) {
                     withStyle(SpanStyle(color = commentColor, fontStyle = FontStyle.Italic)) { append(n.comment) }
                     append(' ')
                 }
@@ -103,13 +109,14 @@ fun MoveListView(
                 while (parent.children.isNotEmpty()) {
                     val main = parent.children[0]
                     move(main, depth, force)
-                    force = main.comment.isNotEmpty()
-                    if (parent.children.size > 1) {
+                    force = showComments && main.comment.isNotEmpty()
+                    val vars = parent.children.drop(1).filter { showVariations || it in path }
+                    if (vars.isNotEmpty()) {
                         if (depth == 0) append("\n")
-                        for (v in parent.children.drop(1)) {
+                        for (v in vars) {
                             withStyle(SpanStyle(color = varColor)) { append("( ") }
                             move(v, depth + 1, true)
-                            line(v, depth + 1, v.comment.isNotEmpty())
+                            line(v, depth + 1, showComments && v.comment.isNotEmpty())
                             withStyle(SpanStyle(color = varColor)) { append(") ") }
                             if (depth == 0) append("\n")
                         }
@@ -119,7 +126,7 @@ fun MoveListView(
                 }
             }
 
-            if (game.root.comment.isNotEmpty()) {
+            if (showComments && game.root.comment.isNotEmpty()) {
                 withStyle(SpanStyle(color = commentColor, fontStyle = FontStyle.Italic)) { append(game.root.comment) }
                 append("\n")
             }

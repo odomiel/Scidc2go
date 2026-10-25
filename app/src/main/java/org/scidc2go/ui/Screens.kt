@@ -560,6 +560,16 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                             trailingIcon = { Switch(vm.engineOn, onCheckedChange = null) },
                             onClick = { menu = false; vm.toggleEngine() },
                         )
+                        DropdownMenuItem(
+                            { Text("Kommentare anzeigen") },
+                            trailingIcon = { Switch(vm.showComments, onCheckedChange = null) },
+                            onClick = { menu = false; vm.toggleComments() },
+                        )
+                        DropdownMenuItem(
+                            { Text("Varianten anzeigen") },
+                            trailingIcon = { Switch(vm.showVariations, onCheckedChange = null) },
+                            onClick = { menu = false; vm.toggleVariations() },
+                        )
                         HorizontalDivider()
                         DropdownMenuItem({ Text("Neue Partie") }, onClick = { menu = false; vm.newGame() })
                         DropdownMenuItem({ Text("Partiedaten bearbeiten") }, onClick = { menu = false; tagDialog = true })
@@ -614,7 +624,10 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                     // Im Querformat ist über dem Brett kein Platz: Analyse oben neben dem Brett
                     Column(Modifier.weight(1f).fillMaxHeight()) {
                         EnginePanel(vm)
-                        MoveListView(game, node, vm.treeVersion, { vm.goTo(it) }, Modifier.weight(1f).fillMaxWidth())
+                        MoveListView(
+                            game, node, vm.treeVersion, { vm.goTo(it) }, Modifier.weight(1f).fillMaxWidth(),
+                            vm.showComments, vm.showVariations,
+                        )
                         AnnotationBar(vm)
                     }
                 }
@@ -624,7 +637,10 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                     board(Modifier.fillMaxWidth())
                     NavBar(vm)
                     HorizontalDivider()
-                    MoveListView(game, node, vm.treeVersion, { vm.goTo(it) }, Modifier.weight(1f).fillMaxWidth())
+                    MoveListView(
+                        game, node, vm.treeVersion, { vm.goTo(it) }, Modifier.weight(1f).fillMaxWidth(),
+                        vm.showComments, vm.showVariations,
+                    )
                     AnnotationBar(vm)
                 }
             }

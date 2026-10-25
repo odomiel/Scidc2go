@@ -39,6 +39,8 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    - Ein Zug in der Zugliste springt zu dieser Stellung.
    - **Analyse** im Menü (⋮) startet die gewählte Engine. Ihre Varianten stehen über dem Brett (im Querformat
      daneben); ein Antippen einer Variante spielt deren ersten Zug.
+   - **Kommentare anzeigen** und **Varianten anzeigen** im Menü blenden Kommentare bzw. Varianten in der Zugliste
+     aus (die Einstellung bleibt erhalten). Die Variante mit dem aktuellen Zug bleibt immer sichtbar.
    - Menü: Partiedaten, Kommentar, Variante hochstufen oder löschen, PGN/FEN kopieren, PGN einfügen.
    - **Speichern**: in die geöffnete Scid-5-Datenbank (ersetzen oder neu) oder in eine andere bzw. neue Scid-5-Datenbank im Ordner.
 
