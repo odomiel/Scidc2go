@@ -138,9 +138,19 @@ class UciEngine(
         }
     }
 
-    /** Analysiert die Stellung (Startstellung + Züge in UCI-Notation) unbegrenzt. */
-    fun analyze(startFen: String, moves: List<String>, current: Position) {
+    /** Zuletzt gesetzter Wert von UCI_Chess960 (null = noch nicht gesetzt). */
+    private var chess960: Boolean? = null
+
+    /**
+     * Analysiert die Stellung (Startstellung + Züge in UCI-Notation) unbegrenzt. Bei [chess960] stehen
+     * Rochaden als „König schlägt eigenen Turm“ in [moves]; die Engine wird dafür mit UCI_Chess960 umgestellt.
+     */
+    fun analyze(startFen: String, moves: List<String>, current: Position, chess960: Boolean = false) {
         stopSearch()
+        if (this.chess960 != chess960) {
+            send("setoption name UCI_Chess960 value $chess960")
+            this.chess960 = chess960
+        }
         lines = sortedMapOf()
         whiteToMove = current.toMove == org.scidc2go.chess.WHITE
         val mv = if (moves.isEmpty()) "" else " moves " + moves.joinToString(" ")

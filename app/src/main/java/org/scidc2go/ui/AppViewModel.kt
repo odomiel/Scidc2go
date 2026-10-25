@@ -827,7 +827,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             e.stop()
             return
         }
-        e.analyze(g.startPosition.toFen(), moves, n.pos)
+        e.analyze(g.startPosition.toFen(), moves, n.pos, g.startPosition.chess960)
     }
 
     /** Wandelt eine Engine-Variante in SAN mit Zugnummern um. */

@@ -78,7 +78,9 @@ keyPassword=…
 
 ## Kompatibilität und Tests
 
-- Zuggenerator: Perft-Tests mit Standardstellungen.
+- Zuggenerator: Perft-Tests mit Standardstellungen und Chess960-Stellungen (Sollwerte von Stockfish 19).
+- Chess960: Rochaden mit beliebigen Turm- und Königsfeldern, FEN als X-FEN oder Shredder-FEN; die Engine
+  wird dafür mit `UCI_Chess960` umgestellt. Andere Schachvarianten (Crazyhouse, Antichess usw.) gibt es nicht.
 - Scid 4/5 lesen: Datenbanken, die mit Scid 5.2 erzeugt wurden, liefern Partie für Partie dieselben Züge,
   Varianten, Kommentare und Tags wie Scids eigener PGN-Export (`app/src/test/resources`).
 - Scid 5 schreiben: über 300 Zufallspartien mit Varianten, Kommentaren, NAGs, Umwandlungen,

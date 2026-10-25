@@ -327,14 +327,15 @@ class Position {
         val pieceNum = listPos[from]
 
         if (ptype == KING) {
+            // Turmfeld vor dem Löschen der Rochaderechte bestimmen (bei Chess960 nicht a/h)
+            val rank = if (c == WHITE) 0 else 7
+            val rookFrom = if (m.castle != 0) rookFromForCastle(c, m.castle > 0, rank) else -1
             castleRook[c * 2] = -1
             castleRook[c * 2 + 1] = -1
             if (m.castle != 0) {
-                val rank = if (c == WHITE) 0 else 7
                 val kingSide = m.castle > 0
                 val kTo = square(if (kingSide) 6 else 2, rank)
                 val rTo = square(if (kingSide) 5 else 3, rank)
-                val rookFrom = rookFromForCastle(c, kingSide, rank)
                 val rookIdx = listPos[rookFrom]
                 board[rookFrom] = EMPTY
                 board[from] = EMPTY
