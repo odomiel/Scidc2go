@@ -18,10 +18,15 @@
 package org.scidc2go.ui
 
 import android.app.Application
+import android.app.LocaleManager
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.LocaleList
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +37,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
 import org.scidc2go.chess.Game
 import org.scidc2go.chess.Move
 import org.scidc2go.chess.Node
@@ -52,15 +59,20 @@ import org.scidc2go.engine.UciEngine
 import org.scidc2go.storage.DbEntry
 import org.scidc2go.storage.DbFormat
 import org.scidc2go.storage.SafStorage
+import org.scidc2go.userMessage
 import java.io.File
 
 enum class Screen { FILES, GAMES, BOARD }
 
-enum class ThemeMode(val label: String) { SYSTEM("Wie System"), LIGHT("Hell"), DARK("Dunkel") }
+enum class ThemeMode(@StringRes val label: Int) { SYSTEM(R.string.theme_system), LIGHT(R.string.theme_light), DARK(R.string.theme_dark) }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val ctx get() = getApplication<Application>()
     private val prefs = app.getSharedPreferences("scidc2go", 0)
+
+    private fun str(@StringRes id: Int, vararg args: Any): String = ctx.getString(id, *args)
+    private fun plural(@PluralsRes id: Int, n: Int, vararg args: Any): String =
+        ctx.resources.getQuantityString(id, n, *args)
 
     var screen by mutableStateOf(Screen.FILES)
     var themeMode by mutableStateOf(
@@ -147,7 +159,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri).filter { it.complete } }
             } catch (e: Exception) {
-                message = "Ordner nicht lesbar: ${e.message}"
+                message = str(R.string.err_folder_unreadable, e.userMessage(ctx))
             }
         }
     }
@@ -158,7 +170,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 block()
             } catch (e: Exception) {
-                message = e.message ?: e.toString()
+                message = e.userMessage(ctx)
             } finally {
                 busy = null
             }
@@ -167,10 +179,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openDatabase(entry: DbEntry) {
         val uri = folderUri ?: return
-        runBusy("Öffne ${entry.baseName} …") {
+        runBusy(str(R.string.busy_opening, entry.baseName)) {
             val newDb = withContext(Dispatchers.IO) {
                 SafStorage.open(ctx, uri, entry, writable = entry.format == DbFormat.SCID5) { p ->
-                    busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
+                    busy = str(R.string.busy_reading, entry.baseName, (p * 100).toInt())
                 }
             }
             setDatabase(newDb, entry, uri)
@@ -178,11 +190,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openPgnUri(uri: Uri) {
-        runBusy("Öffne PGN …") {
+        runBusy(str(R.string.busy_opening_pgn)) {
             val name = queryName(uri) ?: "PGN"
             val newDb = withContext(Dispatchers.IO) {
                 SafStorage.openPgn(ctx, uri, name.removeSuffix(".pgn")) { p ->
-                    busy = "Lese $name … ${(p * 100).toInt()} %"
+                    busy = str(R.string.busy_reading, name, (p * 100).toInt())
                 }
             }
             setDatabase(newDb, null, null)
@@ -202,10 +214,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun openDocuments(uris: List<Uri>) {
         if (uris.isEmpty()) return
-        runBusy("Öffne …") {
+        runBusy(str(R.string.busy_opening_generic)) {
             val entries = withContext(Dispatchers.IO) { SafStorage.groupDocuments(ctx, uris) }
             entries.firstOrNull { it.complete }?.let { openEntry(null, it); return@runBusy }
-            val e = entries.firstOrNull() ?: run { message = "Kein bekanntes Datenbankformat"; return@runBusy }
+            val e = entries.firstOrNull() ?: run { message = str(R.string.err_unknown_format); return@runBusy }
             val found = withContext(Dispatchers.IO) {
                 SafStorage.findInTrees(ctx, e.files.values.first(), grantedTrees())
             }
@@ -221,12 +233,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         siblingRequest = null
         if (tree == null) return
         setFolder(tree)
-        runBusy("Öffne ${want.baseName} …") {
+        runBusy(str(R.string.busy_opening, want.baseName)) {
             val found = withContext(Dispatchers.IO) {
                 SafStorage.findInTrees(ctx, want.files.values.first(), listOf(tree))
             }
             if (found == null) {
-                message = "${want.baseName} liegt nicht in diesem Ordner"
+                message = str(R.string.err_not_in_folder, want.baseName)
                 return@runBusy
             }
             openFound(found.first, found.second)
@@ -236,8 +248,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Öffnet eine im Ordner gefundene Datenbank oder meldet, welche Dateien fehlen. */
     private suspend fun openFound(tree: Uri, entry: DbEntry) {
         if (!entry.complete) {
-            message = "Es fehlen Dateien: " +
-                entry.format.exts.filter { it !in entry.files }.joinToString(", ") { "${entry.baseName}.$it" }
+            message = str(R.string.err_missing_files,
+                entry.format.exts.filter { it !in entry.files }.joinToString(", ") { "${entry.baseName}.$it" })
             return
         }
         openEntry(tree, entry)
@@ -252,7 +264,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun openEntry(tree: Uri?, entry: DbEntry) {
         val newDb = withContext(Dispatchers.IO) {
             SafStorage.open(ctx, tree, entry, writable = entry.format == DbFormat.SCID5) { p ->
-                busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
+                busy = str(R.string.busy_reading, entry.baseName, (p * 100).toInt())
             }
         }
         setDatabase(newDb, if (tree != null) entry else null, tree)
@@ -284,10 +296,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun createScid5(name: String) {
-        val uri = folderUri ?: run { message = "Bitte zuerst einen Ordner wählen"; return }
+        val uri = folderUri ?: run { message = str(R.string.err_choose_folder_first); return }
         val clean = name.trim().removeSuffix(".si5")
         if (clean.isEmpty()) return
-        runBusy("Lege $clean an …") {
+        runBusy(str(R.string.busy_creating, clean)) {
             withContext(Dispatchers.IO) { SafStorage.createScid5(ctx, uri, clean).close() }
             dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri).filter { it.complete } }
             dbEntries.firstOrNull { it.baseName == clean && it.format == DbFormat.SCID5 }?.let { openDatabase(it) }
@@ -333,7 +345,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openGame(index: Int) {
         val d = db ?: return
-        runBusy("Lade Partie …") {
+        runBusy(str(R.string.busy_loading_game)) {
             val g = withContext(Dispatchers.IO) { d.loadGame(index) }
             game = g
             gameIndex = index
@@ -400,7 +412,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteVariation(n: Node) {
-        val v = variationStart(n) ?: run { message = "Das ist die Hauptvariante"; return }
+        val v = variationStart(n) ?: run { message = str(R.string.err_main_line); return }
         val p = v.parent!!
         p.children.remove(v)
         dirty = true
@@ -459,8 +471,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun save(asNew: Boolean = false) {
         val d = db ?: return
         val g = game ?: return
-        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
-        runBusy("Speichere …") {
+        if (!d.writable) { message = str(R.string.err_read_only); return }
+        runBusy(str(R.string.busy_saving)) {
             val idx = withContext(Dispatchers.IO) {
                 if (gameIndex >= 0 && !asNew) { d.replaceGame(gameIndex, g); gameIndex } else d.addGame(g)
             }
@@ -468,7 +480,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             dirty = false
             if (filterText.isEmpty()) filtered = IntArray(d.gameCount) { it } else search(filterText)
             listVersion++
-            message = "Gespeichert (Partie ${idx + 1})"
+            message = str(R.string.saved, idx + 1)
         }
     }
 
@@ -477,11 +489,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val uri = folderUri ?: return
         val g = game ?: return
         if (entry == dbEntry && db?.writable == true) { save(asNew = true); return }
-        runBusy("Speichere in ${entry.baseName} …") {
+        runBusy(str(R.string.busy_saving_in, entry.baseName)) {
             val idx = withContext(Dispatchers.IO) {
                 SafStorage.open(ctx, uri, entry, writable = true) {}.use { it.addGame(g) }
             }
-            message = "In ${entry.baseName} gespeichert (Partie ${idx + 1})"
+            message = str(R.string.saved_in, entry.baseName, idx + 1)
             refreshFolder()
         }
     }
@@ -492,17 +504,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val g = game ?: return
         val clean = name.trim().removeSuffix(".si5")
         if (clean.isEmpty()) return
-        runBusy("Lege $clean an …") {
+        runBusy(str(R.string.busy_creating, clean)) {
             withContext(Dispatchers.IO) { SafStorage.createScid5(ctx, uri, clean).use { it.addGame(g) } }
-            message = "In neuer Datenbank $clean gespeichert"
+            message = str(R.string.saved_in_new, clean)
             dbEntries = withContext(Dispatchers.IO) { SafStorage.listDatabases(ctx, uri).filter { it.complete } }
         }
     }
 
     fun toggleDeleted(index: Int) {
         val d = db ?: return
-        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
-        runBusy("Ändere Löschmarkierung …") {
+        if (!d.writable) { message = str(R.string.err_read_only); return }
+        runBusy(str(R.string.busy_mark)) {
             withContext(Dispatchers.IO) { d.setDeleted(index, !d.header(index).deleted) }
             listVersion++
         }
@@ -514,16 +526,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun requestDelete(indices: List<Int>) {
         val d = db ?: return
-        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
+        if (!d.writable) { message = str(R.string.err_read_only); return }
         deleteRequest = indices
     }
 
     /** Fragt nach, ob alle zum Löschen markierten Partien gelöscht werden sollen. */
     fun requestDeleteMarked() {
         val d = db ?: return
-        runBusy("Suche markierte Partien …") {
+        runBusy(str(R.string.busy_find_marked)) {
             val marked = withContext(Dispatchers.IO) { (0 until d.gameCount).filter { d.header(it).deleted } }
-            if (marked.isEmpty()) message = "Keine Partie ist zum Löschen markiert" else requestDelete(marked)
+            if (marked.isEmpty()) message = str(R.string.none_marked) else requestDelete(marked)
         }
     }
 
@@ -534,10 +546,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val indices = deleteRequest
         deleteRequest = emptyList()
         if (indices.isEmpty()) return
-        runBusy("Lösche ${indices.size} Partie(n) …") {
+        runBusy(plural(R.plurals.busy_deleting, indices.size, indices.size)) {
             withContext(Dispatchers.IO) { d.deleteGames(indices) }
             gamesRemoved(indices)
-            message = if (indices.size == 1) "Partie gelöscht" else "${indices.size} Partien gelöscht"
+            message = plural(R.plurals.deleted, indices.size, indices.size)
             search(filterText)
             refreshFolder()
         }
@@ -563,10 +575,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun requestCompact() {
         val d = db ?: return
         if (!canCompact) {
-            message = "Komprimieren geht nur bei Scid-5-Datenbanken aus einem freigegebenen Ordner"
+            message = str(R.string.err_compact_only)
             return
         }
-        runBusy("Zähle markierte Partien …") {
+        runBusy(str(R.string.busy_counting)) {
             compactRequest = withContext(Dispatchers.IO) { (0 until d.gameCount).count { d.header(it).deleted } }
         }
     }
@@ -578,7 +590,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val d = db ?: return
         val entry = dbEntry ?: return
         val tree = dbTree ?: return
-        runBusy("Komprimiere ${entry.baseName} …") {
+        runBusy(str(R.string.busy_compacting, entry.baseName)) {
             val before = entry.size
             d.close()
             val (removed, fresh) = try {
@@ -593,8 +605,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             db = newDb
             dbEntry = fresh
             gamesRemoved(removed)
-            message = "Komprimiert: ${formatBytes(before)} → ${formatBytes(fresh.size)}" +
-                if (removed.isNotEmpty()) ", ${removed.size} markierte Partie(n) entfernt" else ""
+            message = str(R.string.compacted, formatBytes(before), formatBytes(fresh.size)) +
+                if (removed.isNotEmpty()) plural(R.plurals.compacted_removed, removed.size, removed.size) else ""
             search(filterText)
             refreshFolder()
         }
@@ -613,10 +625,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun requestConvert() {
         val d = db ?: return
         val (tree, folder) = convertTarget() ?: run {
-            message = "Bitte zuerst einen Ordner wählen, in dem die Scid-5-Datenbank entstehen soll"
+            message = str(R.string.err_folder_for_convert)
             return
         }
-        runBusy("Prüfe Namen …") {
+        runBusy(str(R.string.busy_check_name)) {
             val base = d.name.removeSuffix(".pgn")
             convertRequest = withContext(Dispatchers.IO) {
                 generateSequence(1) { it + 1 }.map { if (it == 1) base else "$base-$it" }
@@ -633,17 +645,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val (tree, folder) = convertTarget() ?: return
         val clean = name.trim().removeSuffix(".si5")
         if (clean.isEmpty()) return
-        runBusy("Konvertiere …") {
+        runBusy(str(R.string.busy_converting)) {
             val total = d.gameCount
             val failed = withContext(Dispatchers.IO) {
-                if (SafStorage.scid5Exists(ctx, tree, folder, clean)) throw java.io.IOException("$clean existiert bereits")
+                if (SafStorage.scid5Exists(ctx, tree, folder, clean)) throw LocalizedIOException(R.string.err_exists, clean)
                 SafStorage.convertToScid5(ctx, tree, folder, clean, d) { n ->
-                    if (n % 50 == 0 || n == total) busy = "Konvertiere nach $clean … $n / $total"
+                    if (n % 50 == 0 || n == total) busy = str(R.string.busy_converting_to, clean, n, total)
                 }
             }
-            message = "In Scid 5 konvertiert: $clean (${total - failed.size} Partien)" +
-                if (failed.isNotEmpty()) ", ${failed.size} nicht übernommen (Partien ${failed.take(5).joinToString { "${it + 1}" }}" +
-                    (if (failed.size > 5) " …" else "") + ")" else ""
+            val done = total - failed.size
+            message = plural(R.plurals.converted, done, clean, done) +
+                if (failed.isNotEmpty()) {
+                    str(R.string.converted_failed, failed.size,
+                        failed.take(5).joinToString { "${it + 1}" } + if (failed.size > 5) " …" else "")
+                } else ""
             refreshFolder()
         }
     }
@@ -667,7 +682,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen = Screen.BOARD
             analyzeCurrent()
         } catch (e: Exception) {
-            message = "Kein gültiges PGN: ${e.message}"
+            message = str(R.string.err_invalid_pgn, e.userMessage(ctx))
         }
     }
 
@@ -684,14 +699,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         val oex = selectedOex()
         if (engineId.isNotEmpty() && oex == null) {
-            message = "Die gewählte Engine ist nicht mehr installiert, nehme Stockfish"
+            message = str(R.string.err_engine_missing)
             selectEngine("")
         }
         if (oex == null && !StockfishNet.file(ctx.filesDir).exists()) {
             netRequest = true
             return
         }
-        runBusy("Starte ${oex?.name ?: "Stockfish"} …") {
+        runBusy(str(R.string.busy_starting, oex?.name ?: "Stockfish")) {
             val e = withContext(Dispatchers.IO) { startEngine(oex) }
             engine = e
             engineOn = true
@@ -710,9 +725,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Lädt das Stockfish-Netz und startet danach die Engine. */
     fun downloadNet() {
         netRequest = false
-        runBusy("Lade Stockfish-Netz …") {
+        runBusy(str(R.string.busy_net)) {
             withContext(Dispatchers.IO) {
-                StockfishNet.download(ctx.filesDir) { p -> busy = "Lade Stockfish-Netz … ${(p * 100).toInt()} %" }
+                StockfishNet.download(ctx.filesDir) { p -> busy = str(R.string.busy_net_progress, (p * 100).toInt()) }
             }
             toggleEngine()
         }
@@ -743,6 +758,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleVariations() {
         showVariations = !showVariations
         prefs.edit().putBoolean("showVariations", showVariations).apply()
+    }
+
+    /** Eigene Sprache der App gibt es erst ab Android 13; davor gilt immer die Systemsprache. */
+    val languageSelectable get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+
+    /** Gewählte Sprache als Sprach-Tag ("de", "en"), leer = wie System. */
+    var language by mutableStateOf(
+        if (languageSelectable) ctx.getSystemService(LocaleManager::class.java).applicationLocales[0]?.language ?: "" else "",
+    )
+        private set
+
+    /** Stellt die Sprache der App um; Android erzeugt die Oberfläche danach neu. */
+    fun changeLanguage(tag: String) {
+        if (!languageSelectable || tag == language) return
+        language = tag
+        ctx.getSystemService(LocaleManager::class.java).applicationLocales =
+            if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
     }
 
     fun changeTheme(mode: ThemeMode) {
@@ -781,7 +813,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             OexEngines.command(ctx, oex)
         } else {
             val exe = File(ctx.applicationInfo.nativeLibraryDir, "libstockfish.so")
-            if (!exe.exists()) throw IllegalStateException("Stockfish ist für dieses Gerät nicht enthalten")
+            if (!exe.exists()) throw LocalizedIOException(R.string.err_no_stockfish)
             options["EvalFile"] = StockfishNet.file(ctx.filesDir).absolutePath
             listOf(exe.absolutePath)
         }
@@ -809,7 +841,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         engine = null
         engineOn = false
         engineLines = emptyList()
-        message = "${oex?.name ?: "Stockfish"} wurde unerwartet beendet" +
+        message = str(R.string.engine_exited, oex?.name ?: "Stockfish") +
             e.lastOutput.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty()
     }
 

@@ -1,4 +1,263 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Standardsprache Englisch; die deutschen Texte stehen in values-de/strings.xml -->
 <resources>
-    <string name="app_name">Scidc2go</string>
+    <string name="app_name" translatable="false">Scidc2go</string>
+
+    <!-- Allgemein -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="cont">Continue</string>
+    <string name="close">Close</string>
+    <string name="menu">Menu</string>
+    <string name="back">Back</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="name">Name</string>
+    <string name="clear">Clear</string>
+    <string name="load">Load</string>
+
+    <!-- Datenbankformate -->
+    <string name="fmt_scid5" translatable="false">Scid 5</string>
+    <string name="fmt_scid4" translatable="false">Scid 4</string>
+    <string name="fmt_scid3" translatable="false">Scid 3</string>
+    <string name="fmt_scidb" translatable="false">Scidb</string>
+    <string name="fmt_pgn" translatable="false">PGN</string>
+    <string name="fmt_scidb_archive">Scidb archive</string>
+    <string name="fmt_pgn_gz" translatable="false">PGN gzip</string>
+    <string name="fmt_pgn_zip" translatable="false">PGN zip</string>
+
+    <!-- Stockfish-Netz -->
+    <string name="net_title">Download Stockfish network</string>
+    <string name="net_text">For analysis, Stockfish needs its evaluation network (%1$d MB). It is downloaded once from stockfishchess.org, preferably over Wi-Fi.</string>
+    <string name="net_download">Download</string>
+
+    <!-- Dateien -->
+    <string name="refresh">Refresh</string>
+    <string name="choose_folder">Choose folder</string>
+    <string name="settings">Settings</string>
+    <string name="about">About</string>
+    <string name="open_files">Open files</string>
+    <string name="board">Board</string>
+    <string name="new_scid5_db_short">New Scid 5 DB</string>
+    <string name="choose_folder_hint">Choose the folder that contains your databases (Scid 3/4/5, Scidb, PGN, also compressed). Or open individual files.</string>
+    <string name="no_databases">No databases in this folder.</string>
+    <string name="new_scid5_db">New Scid 5 database</string>
+    <string name="new_scid5_db_dots">New Scid 5 database …</string>
+    <string name="sibling_text">A %1$s database consists of %2$s. So that the app can read the other files, grant access to the folder once in the next step (“Use this folder”). After that, databases from this folder and its subfolders open directly.</string>
+
+    <!-- Einstellungen -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_language">Language</string>
+    <string name="lang_system">System default</string>
+    <string name="settings_engine">Engine</string>
+    <string name="engine_builtin">Stockfish (built-in)</string>
+    <string name="oex_hint_none">More engines appear here when engine apps following the Open Exchange standard (OEX) are installed.</string>
+    <string name="oex_hint">Additional engines come from installed engine apps (Open Exchange).</string>
+
+    <!-- Über -->
+    <string name="about_text">Chess databases on the go: reads Scid 3/4/5, Scidb and PGN (also Scidb archives .scv and PGN as .gz or .zip), writes Scid 5.</string>
+    <string name="about_license">Free software under the GNU General Public License, version 3 or later. No warranty. Source code and license text come with the project.</string>
+    <string name="about_components">Included free components:</string>
+    <string name="about_pieces">• Chess pieces “cburnett” by Colin M.L. Burnett – GPLv2+</string>
+    <string name="about_formats">• Database formats based on the source code of Scid (GPL) and Scidb (GPL)</string>
+
+    <!-- Partieliste -->
+    <plurals name="games_subtitle">
+        <item quantity="one">%1$s · %2$d / %3$d game</item>
+        <item quantity="other">%1$s · %2$d / %3$d games</item>
+    </plurals>
+    <string name="read_only">read-only</string>
+    <string name="delete_marked">Delete marked games</string>
+    <string name="compact_db">Compact database</string>
+    <string name="convert_scid5">Convert to Scid 5</string>
+    <string name="search_hint">Player, event, year, ECO …</string>
+    <string name="moves_short">%d mv</string>
+    <string name="mark_delete">Mark for deletion</string>
+    <string name="unmark_delete">Remove deletion mark</string>
+    <string name="delete_game">Delete game</string>
+    <string name="new_db_name">Name of the new database</string>
+    <string name="compact_title">Compact %1$s?</string>
+    <plurals name="compact_marked">
+        <item quantity="one">%d game marked for deletion will be removed permanently.</item>
+        <item quantity="other">%d games marked for deletion will be removed permanently.</item>
+    </plurals>
+    <string name="compact_text">Unused space in the game file and names no longer in use are freed. The app writes a new copy and replaces the original only once it is complete.</string>
+    <string name="compact">Compact</string>
+    <plurals name="delete_title">
+        <item quantity="one">Delete game?</item>
+        <item quantity="other">Delete %d games?</item>
+    </plurals>
+    <string name="delete_one_text">Game %1$d%2$s will be removed permanently from %3$s. This cannot be undone. The following games move up in the numbering.</string>
+    <string name="delete_many_text">%1$d games will be removed permanently from %2$s. This cannot be undone. The following games move up in the numbering.</string>
+
+    <!-- Brett -->
+    <string name="modified">modified</string>
+    <string name="analysis_menu">Analysis (%1$s)</string>
+    <string name="show_comments">Show comments</string>
+    <string name="show_variations">Show variations</string>
+    <string name="new_game">New game</string>
+    <string name="edit_tags">Edit game data</string>
+    <string name="comment_move">Comment on move</string>
+    <string name="promote_variation">Promote variation to main line</string>
+    <string name="delete_variation">Delete variation</string>
+    <string name="truncate">Delete remaining moves from here</string>
+    <string name="copy_pgn">Copy PGN</string>
+    <string name="pgn_copied">PGN copied to clipboard</string>
+    <string name="paste_pgn">Paste PGN</string>
+    <string name="copy_fen">Copy FEN</string>
+    <string name="fen_copied">FEN copied</string>
+    <string name="comment">Comment</string>
+    <string name="text">Text</string>
+    <string name="nav_start">Start</string>
+    <string name="nav_forward">Forward</string>
+    <string name="nav_end">End</string>
+    <string name="flip_board">Flip board</string>
+    <string name="depth">depth %d</string>
+    <string name="promote_to">Promote to</string>
+
+    <!-- Partiedaten -->
+    <string name="game_data">Game data</string>
+    <string name="tag_white">White</string>
+    <string name="tag_white_elo">White Elo</string>
+    <string name="tag_black">Black</string>
+    <string name="tag_black_elo">Black Elo</string>
+    <string name="tag_event">Event</string>
+    <string name="tag_site">Site</string>
+    <string name="tag_date">Date (YYYY.MM.DD)</string>
+    <string name="tag_round">Round</string>
+    <string name="tag_result">Result (1-0, 0-1, 1/2-1/2, *)</string>
+    <string name="tag_eco" translatable="false">ECO</string>
+    <string name="tag_annotator">Annotator</string>
+
+    <!-- Speichern -->
+    <string name="save_game">Save game</string>
+    <string name="replace_game">Replace game %d</string>
+    <string name="save_as_new">As new game in %s</string>
+    <string name="into_scid5">Into Scid 5 database:</string>
+    <string name="no_folder">No folder selected.</string>
+
+    <!-- Fortschritt und Meldungen -->
+    <string name="busy_opening">Opening %s …</string>
+    <string name="busy_opening_generic">Opening …</string>
+    <string name="busy_opening_pgn">Opening PGN …</string>
+    <string name="busy_reading">Reading %1$s … %2$d %%</string>
+    <string name="busy_creating">Creating %s …</string>
+    <string name="busy_loading_game">Loading game …</string>
+    <string name="busy_saving">Saving …</string>
+    <string name="busy_saving_in">Saving to %s …</string>
+    <string name="busy_mark">Changing deletion mark …</string>
+    <string name="busy_find_marked">Looking for marked games …</string>
+    <plurals name="busy_deleting">
+        <item quantity="one">Deleting %d game …</item>
+        <item quantity="other">Deleting %d games …</item>
+    </plurals>
+    <string name="busy_counting">Counting marked games …</string>
+    <string name="busy_compacting">Compacting %s …</string>
+    <string name="busy_check_name">Checking name …</string>
+    <string name="busy_converting">Converting …</string>
+    <string name="busy_converting_to">Converting to %1$s … %2$d / %3$d</string>
+    <string name="busy_starting">Starting %s …</string>
+    <string name="busy_net">Downloading Stockfish network …</string>
+    <string name="busy_net_progress">Downloading Stockfish network … %d %%</string>
+    <string name="saved">Saved (game %d)</string>
+    <string name="saved_in">Saved to %1$s (game %2$d)</string>
+    <string name="saved_in_new">Saved to new database %s</string>
+    <string name="none_marked">No game is marked for deletion</string>
+    <plurals name="deleted">
+        <item quantity="one">Game deleted</item>
+        <item quantity="other">%d games deleted</item>
+    </plurals>
+    <string name="compacted">Compacted: %1$s → %2$s</string>
+    <plurals name="compacted_removed">
+        <item quantity="one">, %d marked game removed</item>
+        <item quantity="other">, %d marked games removed</item>
+    </plurals>
+    <plurals name="converted">
+        <item quantity="one">Converted to Scid 5: %1$s (%2$d game)</item>
+        <item quantity="other">Converted to Scid 5: %1$s (%2$d games)</item>
+    </plurals>
+    <string name="converted_failed">, %1$d not transferred (games %2$s)</string>
+    <string name="engine_exited">%s terminated unexpectedly</string>
+
+    <!-- Fehler der Oberfläche -->
+    <string name="err_folder_unreadable">Folder not readable: %s</string>
+    <string name="err_unknown_format">Unknown database format</string>
+    <string name="err_not_in_folder">%s is not in this folder</string>
+    <string name="err_missing_files">Files missing: %s</string>
+    <string name="err_choose_folder_first">Please choose a folder first</string>
+    <string name="err_main_line">This is the main line</string>
+    <string name="err_read_only">This database is read-only</string>
+    <string name="err_compact_only">Only Scid 5 databases from a granted folder can be compacted</string>
+    <string name="err_folder_for_convert">Please first choose a folder where the Scid 5 database should be created</string>
+    <string name="err_exists">%s already exists</string>
+    <string name="err_invalid_pgn">Not valid PGN: %s</string>
+    <string name="err_engine_missing">The selected engine is no longer installed, using Stockfish</string>
+    <string name="err_no_stockfish">Stockfish is not included for this device</string>
+
+    <!-- Fehler beim Lesen und Schreiben von Dateien -->
+    <string name="err_eof">Unexpected end of file</string>
+    <string name="err_data_end">Unexpected end of data</string>
+    <string name="err_file_too_large">File too large</string>
+    <string name="err_no_folder_access">No folder access</string>
+    <string name="err_grant_folder">No folder access: please grant access to the database\'s folder</string>
+    <string name="err_cannot_rename">Cannot rename %s</string>
+    <string name="err_cannot_delete">Cannot delete %s</string>
+    <string name="err_cannot_create">Cannot create %s</string>
+    <string name="err_missing_file">%s is missing</string>
+    <string name="err_db_exists">Database already exists</string>
+    <string name="err_not_found_after_compact">%s not found after compacting</string>
+    <string name="err_no_scid_index">Not a Scid index file</string>
+    <string name="err_scid_version">Unknown Scid version %d</string>
+    <string name="err_no_scid_names">Not a Scid name file</string>
+    <string name="err_corrupt_names">Corrupt name file</string>
+    <string name="err_scid5_index">Corrupt Scid 5 index file</string>
+    <string name="err_game_too_large">Game too large for the Scid 5 format</string>
+    <string name="err_invalid_fen">Invalid FEN: %s</string>
+    <string name="err_corrupt_game">Corrupt game data</string>
+    <string name="err_corrupt_game_detail">Corrupt game data (%s)</string>
+    <string name="err_bad_knight">Corrupt knight move</string>
+    <string name="err_bad_queen">Corrupt queen move</string>
+    <string name="err_bad_king">Corrupt king move</string>
+    <string name="detail_tags">tags</string>
+    <string name="detail_moves">moves</string>
+    <string name="detail_nag" translatable="false">NAG</string>
+    <string name="detail_variation">variation</string>
+    <string name="detail_variation_end">end of variation</string>
+    <string name="detail_game_end">end of game</string>
+    <string name="detail_piece_index">piece index</string>
+    <string name="detail_no_piece">no piece</string>
+    <string name="detail_target">target square</string>
+    <string name="detail_illegal">illegal move</string>
+    <string name="detail_piece">piece</string>
+    <string name="detail_move">move</string>
+    <string name="err_not_scidb">Not a Scidb file</string>
+    <string name="err_scidb_index">Corrupt Scidb index file</string>
+    <string name="err_scidb_old">Old Scidb version (%d). Please open the database in Scidb and upgrade it.</string>
+    <string name="err_scidb_version">Unknown Scidb version (%d)</string>
+    <string name="err_scidb_names_mismatch">Scidb name file does not match the index file</string>
+    <string name="err_scidb_names">Corrupt Scidb name file</string>
+    <string name="err_scidb_game">Corrupt Scidb game data</string>
+    <string name="err_scidb_game_detail">Corrupt Scidb game data (%s)</string>
+    <string name="err_scidb_marker">Corrupt Scidb marker</string>
+    <string name="err_scidb_variant">Scidb variant (position %d) is not supported</string>
+    <string name="err_invalid_960">Invalid Chess960 position</string>
+    <string name="err_not_scv">Not a Scidb archive</string>
+    <string name="err_scv_corrupt">Scidb archive is corrupt</string>
+    <string name="err_scv_no_name">Scidb archive: file name missing</string>
+    <string name="err_scv_no_size">Scidb archive: size missing</string>
+    <string name="err_bad_filename">Invalid file name: %s</string>
+    <string name="err_unknown_compression">%1$s: unknown compression %2$s</string>
+    <string name="err_checksum_file">%s: checksum mismatch</string>
+    <string name="err_archive_no_db">The archive contains no readable database</string>
+    <string name="err_zip_no_pgn">%s contains no PGN file</string>
+
+    <!-- Fehler der Engines -->
+    <string name="err_net_download">Stockfish network could not be downloaded: %s</string>
+    <string name="err_checksum">Checksum mismatch</string>
+    <string name="err_engine_unreadable">%s not readable</string>
+    <string name="err_engine_copy">%s cannot be copied</string>
+    <string name="err_not_engine">%s is not an engine</string>
 </resources>

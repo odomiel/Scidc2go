@@ -17,6 +17,8 @@
  */
 package org.scidc2go.db
 
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
 import org.scidc2go.chess.Game
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -49,7 +51,7 @@ class Scid5Database private constructor(
 
     init {
         val idx = files.openRead("si5").use { it.readAll() }
-        if (idx.size % ENTRY_SIZE != 0) throw IOException("Defekte Scid-5-Indexdatei")
+        if (idx.size % ENTRY_SIZE != 0) throw LocalizedIOException(R.string.err_scid5_index)
         index = idx
         count = idx.size / ENTRY_SIZE
         readNames(files.openRead("sn5").use { it.readAll() })
@@ -61,16 +63,16 @@ class Scid5Database private constructor(
             var v = 0L
             var shift = 0
             while (true) {
-                if (p >= d.size) throw IOException("Defekte Namensdatei")
+                if (p >= d.size) throw LocalizedIOException(R.string.err_corrupt_names)
                 val b = d[p++].toInt() and 0xFF
                 v = v or ((b and 127).toLong() shl shift)
                 if (b < 128) break
                 shift += 7
-                if (shift > 63) throw IOException("Defekte Namensdatei")
+                if (shift > 63) throw LocalizedIOException(R.string.err_corrupt_names)
             }
             val type = (v and 7).toInt()
             val len = (v ushr 3).toInt()
-            if (type > 4 || p + len > d.size) throw IOException("Defekte Namensdatei")
+            if (type > 4 || p + len > d.size) throw LocalizedIOException(R.string.err_corrupt_names)
             if (type < 4) names[type].add(decodeText(d, p, len))
             p += len
         }
@@ -164,7 +166,7 @@ class Scid5Database private constructor(
     // Schreiben
 
     private fun ensureWritable() {
-        if (!canWrite) throw IOException("Datenbank ist schreibgeschützt")
+        if (!canWrite) throw LocalizedIOException(R.string.err_read_only)
         if (gameWrite == null) {
             gameWrite = files.openWrite("sg5")
             indexWrite = files.openWrite("si5")
@@ -372,7 +374,7 @@ class Scid5Database private constructor(
          * Partien, die sich nicht übernehmen ließen (z.B. zu groß für das Format).
          */
         fun convert(src: ChessDatabase, target: DbFileSet, progress: (Int) -> Unit = {}): List<Int> {
-            if (EXTS.any { target.exists(it) }) throw IOException("${target.baseName} existiert bereits")
+            if (EXTS.any { target.exists(it) }) throw LocalizedIOException(R.string.err_exists, target.baseName)
             val tmp = target.sibling("${target.baseName}.neu")
             tmp.delete(EXTS)
             val failed = ArrayList<Int>()
@@ -421,7 +423,7 @@ class Scid5Database private constructor(
         /** Legt eine leere Datenbank an (alle drei Dateien dürfen noch nicht existieren). */
         fun create(files: DbFileSet): Scid5Database {
             for (ext in arrayOf("si5", "sg5", "sn5")) {
-                if (files.exists(ext)) throw IOException("Datenbank existiert bereits")
+                if (files.exists(ext)) throw LocalizedIOException(R.string.err_db_exists)
             }
             for (ext in arrayOf("si5", "sg5", "sn5")) files.openWrite(ext).close()
             return Scid5Database(files, true)
@@ -430,4 +432,4 @@ class Scid5Database private constructor(
 }
 
 /** Die Partie überschreitet die Größengrenze des Scid-5-Formats (128 KB). */
-class GameTooLargeException : IOException("Partie zu groß für das Scid-5-Format")
+class GameTooLargeException : LocalizedIOException(R.string.err_game_too_large)

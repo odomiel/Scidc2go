@@ -17,6 +17,9 @@
  */
 package org.scidc2go.engine
 
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
+import org.scidc2go.Text
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -55,7 +58,7 @@ object StockfishNet {
                 error = e
             }
         }
-        throw IOException("Stockfish-Netz konnte nicht geladen werden: ${error?.message}", error)
+        throw LocalizedIOException(Text(R.string.err_net_download, error?.message), error)
     }
 
     private fun fetch(url: String, tmp: File, progress: (Float) -> Unit) {
@@ -80,7 +83,7 @@ object StockfishNet {
                 }
             }
             val hash = sha.digest().joinToString("") { "%02x".format(it) }
-            if (done != SIZE || !NAME.startsWith("nn-" + hash.take(12))) throw IOException("Prüfsumme falsch")
+            if (done != SIZE || !NAME.startsWith("nn-" + hash.take(12))) throw LocalizedIOException(R.string.err_checksum)
         } finally {
             conn.disconnect()
         }

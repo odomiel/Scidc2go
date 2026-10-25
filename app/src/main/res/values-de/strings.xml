@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Allgemein -->
+    <string name="ok">OK</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="cont">Weiter</string>
+    <string name="close">Schließen</string>
+    <string name="menu">Menü</string>
+    <string name="back">Zurück</string>
+    <string name="save">Speichern</string>
+    <string name="delete">Löschen</string>
+    <string name="name">Name</string>
+    <string name="clear">Leeren</string>
+    <string name="load">Laden</string>
+
+    <!-- Datenbankformate -->
+    <string name="fmt_scidb_archive">Scidb-Archiv</string>
+
+    <!-- Stockfish-Netz -->
+    <string name="net_title">Stockfish-Netz laden</string>
+    <string name="net_text">Für die Analyse braucht Stockfish sein Bewertungsnetz (%1$d MB). Es wird einmalig von stockfishchess.org geladen, am besten im WLAN.</string>
+    <string name="net_download">Laden</string>
+
+    <!-- Dateien -->
+    <string name="refresh">Aktualisieren</string>
+    <string name="choose_folder">Ordner wählen</string>
+    <string name="settings">Einstellungen</string>
+    <string name="about">Über</string>
+    <string name="open_files">Dateien öffnen</string>
+    <string name="board">Brett</string>
+    <string name="new_scid5_db_short">Neue Scid-5-DB</string>
+    <string name="choose_folder_hint">Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN, auch gepackt). Oder öffne einzelne Dateien.</string>
+    <string name="no_databases">Keine Datenbanken in diesem Ordner.</string>
+    <string name="new_scid5_db">Neue Scid-5-Datenbank</string>
+    <string name="new_scid5_db_dots">Neue Scid-5-Datenbank …</string>
+    <string name="sibling_text">Eine Datenbank im Format %1$s besteht aus %2$s. Damit die App die übrigen Dateien lesen kann, gib im nächsten Schritt einmalig den Ordner frei („Diesen Ordner verwenden“). Danach öffnen sich Datenbanken aus diesem Ordner und seinen Unterordnern direkt.</string>
+
+    <!-- Einstellungen -->
+    <string name="settings_appearance">Darstellung</string>
+    <string name="theme_system">Wie System</string>
+    <string name="theme_light">Hell</string>
+    <string name="theme_dark">Dunkel</string>
+    <string name="settings_language">Sprache</string>
+    <string name="lang_system">Wie System</string>
+    <string name="settings_engine">Engine</string>
+    <string name="engine_builtin">Stockfish (eingebaut)</string>
+    <string name="oex_hint_none">Weitere Engines erscheinen hier, wenn Engine-Apps nach dem Open-Exchange-Standard (OEX) installiert sind.</string>
+    <string name="oex_hint">Weitere Engines stammen aus installierten Engine-Apps (Open Exchange).</string>
+
+    <!-- Über -->
+    <string name="about_text">Schachdatenbanken unterwegs: lesen von Scid 3/4/5, Scidb und PGN (auch Scidb-Archive .scv sowie PGN als .gz oder .zip), schreiben von Scid 5.</string>
+    <string name="about_license">Freie Software unter der GNU General Public License, Version 3 oder später. Ohne Gewähr. Quelltext und Lizenztext liegen dem Projekt bei.</string>
+    <string name="about_components">Enthaltene freie Komponenten:</string>
+    <string name="about_pieces">• Schachfiguren „cburnett“ von Colin M.L. Burnett – GPLv2+</string>
+    <string name="about_formats">• Datenbankformate nach den Quelltexten von Scid (GPL) und Scidb (GPL)</string>
+
+    <!-- Partieliste -->
+    <plurals name="games_subtitle">
+        <item quantity="one">%1$s · %2$d / %3$d Partie</item>
+        <item quantity="other">%1$s · %2$d / %3$d Partien</item>
+    </plurals>
+    <string name="read_only">nur lesen</string>
+    <string name="delete_marked">Markierte Partien löschen</string>
+    <string name="compact_db">Datenbank komprimieren</string>
+    <string name="convert_scid5">In Scid 5 konvertieren</string>
+    <string name="search_hint">Spieler, Turnier, Jahr, ECO …</string>
+    <string name="moves_short">%d Z.</string>
+    <string name="mark_delete">Zum Löschen markieren</string>
+    <string name="unmark_delete">Löschmarkierung entfernen</string>
+    <string name="delete_game">Partie löschen</string>
+    <string name="new_db_name">Name der neuen Datenbank</string>
+    <string name="compact_title">%1$s komprimieren?</string>
+    <plurals name="compact_marked">
+        <item quantity="one">%d zum Löschen markierte Partie wird endgültig entfernt.</item>
+        <item quantity="other">%d zum Löschen markierte Partien werden endgültig entfernt.</item>
+    </plurals>
+    <string name="compact_text">Ungenutzter Platz in der Partiedatei und nicht mehr verwendete Namen werden freigegeben. Die App schreibt dazu eine neue Kopie und ersetzt das Original erst, wenn sie vollständig ist.</string>
+    <string name="compact">Komprimieren</string>
+    <plurals name="delete_title">
+        <item quantity="one">Partie löschen?</item>
+        <item quantity="other">%d Partien löschen?</item>
+    </plurals>
+    <string name="delete_one_text">Partie %1$d%2$s wird endgültig aus %3$s entfernt. Das lässt sich nicht rückgängig machen. Die folgenden Partien rücken in der Nummerierung nach vorn.</string>
+    <string name="delete_many_text">%1$d Partien werden endgültig aus %2$s entfernt. Das lässt sich nicht rückgängig machen. Die folgenden Partien rücken in der Nummerierung nach vorn.</string>
+
+    <!-- Brett -->
+    <string name="modified">geändert</string>
+    <string name="analysis_menu">Analyse (%1$s)</string>
+    <string name="show_comments">Kommentare anzeigen</string>
+    <string name="show_variations">Varianten anzeigen</string>
+    <string name="new_game">Neue Partie</string>
+    <string name="edit_tags">Partiedaten bearbeiten</string>
+    <string name="comment_move">Kommentar zum Zug</string>
+    <string name="promote_variation">Variante zur Hauptvariante</string>
+    <string name="delete_variation">Variante löschen</string>
+    <string name="truncate">Restliche Züge ab hier löschen</string>
+    <string name="copy_pgn">PGN kopieren</string>
+    <string name="pgn_copied">PGN in die Zwischenablage kopiert</string>
+    <string name="paste_pgn">PGN einfügen</string>
+    <string name="copy_fen">FEN kopieren</string>
+    <string name="fen_copied">FEN kopiert</string>
+    <string name="comment">Kommentar</string>
+    <string name="text">Text</string>
+    <string name="nav_start">Anfang</string>
+    <string name="nav_forward">Vor</string>
+    <string name="nav_end">Ende</string>
+    <string name="flip_board">Brett drehen</string>
+    <string name="depth">Tiefe %d</string>
+    <string name="promote_to">Umwandeln in</string>
+
+    <!-- Partiedaten -->
+    <string name="game_data">Partiedaten</string>
+    <string name="tag_white">Weiß</string>
+    <string name="tag_white_elo">Elo Weiß</string>
+    <string name="tag_black">Schwarz</string>
+    <string name="tag_black_elo">Elo Schwarz</string>
+    <string name="tag_event">Turnier</string>
+    <string name="tag_site">Ort</string>
+    <string name="tag_date">Datum (JJJJ.MM.TT)</string>
+    <string name="tag_round">Runde</string>
+    <string name="tag_result">Ergebnis (1-0, 0-1, 1/2-1/2, *)</string>
+    <string name="tag_annotator">Kommentator</string>
+
+    <!-- Speichern -->
+    <string name="save_game">Partie speichern</string>
+    <string name="replace_game">Partie %d ersetzen</string>
+    <string name="save_as_new">Als neue Partie in %s</string>
+    <string name="into_scid5">In Scid-5-Datenbank:</string>
+    <string name="no_folder">Kein Ordner gewählt.</string>
+
+    <!-- Fortschritt und Meldungen -->
+    <string name="busy_opening">Öffne %s …</string>
+    <string name="busy_opening_generic">Öffne …</string>
+    <string name="busy_opening_pgn">Öffne PGN …</string>
+    <string name="busy_reading">Lese %1$s … %2$d %%</string>
+    <string name="busy_creating">Lege %s an …</string>
+    <string name="busy_loading_game">Lade Partie …</string>
+    <string name="busy_saving">Speichere …</string>
+    <string name="busy_saving_in">Speichere in %s …</string>
+    <string name="busy_mark">Ändere Löschmarkierung …</string>
+    <string name="busy_find_marked">Suche markierte Partien …</string>
+    <plurals name="busy_deleting">
+        <item quantity="one">Lösche %d Partie …</item>
+        <item quantity="other">Lösche %d Partien …</item>
+    </plurals>
+    <string name="busy_counting">Zähle markierte Partien …</string>
+    <string name="busy_compacting">Komprimiere %s …</string>
+    <string name="busy_check_name">Prüfe Namen …</string>
+    <string name="busy_converting">Konvertiere …</string>
+    <string name="busy_converting_to">Konvertiere nach %1$s … %2$d / %3$d</string>
+    <string name="busy_starting">Starte %s …</string>
+    <string name="busy_net">Lade Stockfish-Netz …</string>
+    <string name="busy_net_progress">Lade Stockfish-Netz … %d %%</string>
+    <string name="saved">Gespeichert (Partie %d)</string>
+    <string name="saved_in">In %1$s gespeichert (Partie %2$d)</string>
+    <string name="saved_in_new">In neuer Datenbank %s gespeichert</string>
+    <string name="none_marked">Keine Partie ist zum Löschen markiert</string>
+    <plurals name="deleted">
+        <item quantity="one">Partie gelöscht</item>
+        <item quantity="other">%d Partien gelöscht</item>
+    </plurals>
+    <string name="compacted">Komprimiert: %1$s → %2$s</string>
+    <plurals name="compacted_removed">
+        <item quantity="one">, %d markierte Partie entfernt</item>
+        <item quantity="other">, %d markierte Partien entfernt</item>
+    </plurals>
+    <plurals name="converted">
+        <item quantity="one">In Scid 5 konvertiert: %1$s (%2$d Partie)</item>
+        <item quantity="other">In Scid 5 konvertiert: %1$s (%2$d Partien)</item>
+    </plurals>
+    <string name="converted_failed">, %1$d nicht übernommen (Partien %2$s)</string>
+    <string name="engine_exited">%s wurde unerwartet beendet</string>
+
+    <!-- Fehler der Oberfläche -->
+    <string name="err_folder_unreadable">Ordner nicht lesbar: %s</string>
+    <string name="err_unknown_format">Kein bekanntes Datenbankformat</string>
+    <string name="err_not_in_folder">%s liegt nicht in diesem Ordner</string>
+    <string name="err_missing_files">Es fehlen Dateien: %s</string>
+    <string name="err_choose_folder_first">Bitte zuerst einen Ordner wählen</string>
+    <string name="err_main_line">Das ist die Hauptvariante</string>
+    <string name="err_read_only">Diese Datenbank ist schreibgeschützt</string>
+    <string name="err_compact_only">Komprimieren geht nur bei Scid-5-Datenbanken aus einem freigegebenen Ordner</string>
+    <string name="err_folder_for_convert">Bitte zuerst einen Ordner wählen, in dem die Scid-5-Datenbank entstehen soll</string>
+    <string name="err_exists">%s existiert bereits</string>
+    <string name="err_invalid_pgn">Kein gültiges PGN: %s</string>
+    <string name="err_engine_missing">Die gewählte Engine ist nicht mehr installiert, nehme Stockfish</string>
+    <string name="err_no_stockfish">Stockfish ist für dieses Gerät nicht enthalten</string>
+
+    <!-- Fehler beim Lesen und Schreiben von Dateien -->
+    <string name="err_eof">Unerwartetes Dateiende</string>
+    <string name="err_data_end">Unerwartetes Datenende</string>
+    <string name="err_file_too_large">Datei zu groß</string>
+    <string name="err_no_folder_access">Kein Ordnerzugriff</string>
+    <string name="err_grant_folder">Kein Ordnerzugriff: bitte den Ordner der Datenbank freigeben</string>
+    <string name="err_cannot_rename">Kann %s nicht umbenennen</string>
+    <string name="err_cannot_delete">Kann %s nicht löschen</string>
+    <string name="err_cannot_create">Kann %s nicht anlegen</string>
+    <string name="err_missing_file">%s fehlt</string>
+    <string name="err_db_exists">Datenbank existiert bereits</string>
+    <string name="err_not_found_after_compact">%s nach dem Komprimieren nicht gefunden</string>
+    <string name="err_no_scid_index">Keine Scid-Indexdatei</string>
+    <string name="err_scid_version">Unbekannte Scid-Version %d</string>
+    <string name="err_no_scid_names">Keine Scid-Namensdatei</string>
+    <string name="err_corrupt_names">Defekte Namensdatei</string>
+    <string name="err_scid5_index">Defekte Scid-5-Indexdatei</string>
+    <string name="err_game_too_large">Partie zu groß für das Scid-5-Format</string>
+    <string name="err_invalid_fen">Ungültige FEN: %s</string>
+    <string name="err_corrupt_game">Defekte Partiedaten</string>
+    <string name="err_corrupt_game_detail">Defekte Partiedaten (%s)</string>
+    <string name="err_bad_knight">Defekter Springerzug</string>
+    <string name="err_bad_queen">Defekter Damenzug</string>
+    <string name="err_bad_king">Defekter Königszug</string>
+    <string name="detail_tags">Tags</string>
+    <string name="detail_moves">Züge</string>
+    <string name="detail_variation">Variante</string>
+    <string name="detail_variation_end">Variantenende</string>
+    <string name="detail_game_end">Partieende</string>
+    <string name="detail_piece_index">Figurenindex</string>
+    <string name="detail_no_piece">keine Figur</string>
+    <string name="detail_target">Zielfeld</string>
+    <string name="detail_illegal">ungültiger Zug</string>
+    <string name="detail_piece">Figur</string>
+    <string name="detail_move">Zug</string>
+    <string name="err_not_scidb">Keine Scidb-Datei</string>
+    <string name="err_scidb_index">Defekte Scidb-Indexdatei</string>
+    <string name="err_scidb_old">Alte Scidb-Version (%d). Bitte die Datenbank in Scidb öffnen und aktualisieren.</string>
+    <string name="err_scidb_version">Unbekannte Scidb-Version (%d)</string>
+    <string name="err_scidb_names_mismatch">Scidb-Namensdatei passt nicht zur Indexdatei</string>
+    <string name="err_scidb_names">Defekte Scidb-Namensdatei</string>
+    <string name="err_scidb_game">Defekte Scidb-Partiedaten</string>
+    <string name="err_scidb_game_detail">Defekte Scidb-Partiedaten (%s)</string>
+    <string name="err_scidb_marker">Defekte Scidb-Markierung</string>
+    <string name="err_scidb_variant">Scidb-Variante (Stellung %d) wird nicht unterstützt</string>
+    <string name="err_invalid_960">Ungültige Chess960-Stellung</string>
+    <string name="err_not_scv">Kein Scidb-Archiv</string>
+    <string name="err_scv_corrupt">Scidb-Archiv ist beschädigt</string>
+    <string name="err_scv_no_name">Scidb-Archiv: Dateiname fehlt</string>
+    <string name="err_scv_no_size">Scidb-Archiv: Größe fehlt</string>
+    <string name="err_bad_filename">Ungültiger Dateiname: %s</string>
+    <string name="err_unknown_compression">%1$s: unbekannte Kompression %2$s</string>
+    <string name="err_checksum_file">%s: Prüfsumme falsch</string>
+    <string name="err_archive_no_db">Das Archiv enthält keine lesbare Datenbank</string>
+    <string name="err_zip_no_pgn">%s enthält keine PGN-Datei</string>
+
+    <!-- Fehler der Engines -->
+    <string name="err_net_download">Stockfish-Netz konnte nicht geladen werden: %s</string>
+    <string name="err_checksum">Prüfsumme falsch</string>
+    <string name="err_engine_unreadable">%s nicht lesbar</string>
+    <string name="err_engine_copy">%s kann nicht kopiert werden</string>
+    <string name="err_not_engine">%s ist keine Engine</string>
+</resources>

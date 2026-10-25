@@ -21,7 +21,11 @@
  */
 package org.scidc2go.db
 
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
+import org.scidc2go.Text
 import org.scidc2go.chess.BISHOP
+import org.scidc2go.chess.BLACK
 import org.scidc2go.chess.EMPTY
 import org.scidc2go.chess.Game
 import org.scidc2go.chess.KING
@@ -33,7 +37,6 @@ import org.scidc2go.chess.Position
 import org.scidc2go.chess.QUEEN
 import org.scidc2go.chess.ROOK
 import org.scidc2go.chess.WHITE
-import org.scidc2go.chess.BLACK
 import org.scidc2go.chess.colorOf
 import org.scidc2go.chess.fileOf
 import org.scidc2go.chess.pieceOf
@@ -180,7 +183,7 @@ object ScidFormat {
         val tags = LinkedHashMap<String, String>()
         // Zusatztags
         while (true) {
-            if (p >= data.size) throw IOException("Defekte Partiedaten (Tags)")
+            if (p >= data.size) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_tags))
             val tagLen = data[p++].toInt() and 0xFF
             if (tagLen == 0) break
             var tagName: String? = null
@@ -192,7 +195,7 @@ object ScidFormat {
                 p += tagLen
             }
             val valueLen = if (tagLen != 255) (data[p++].toInt() and 0xFF) else 3
-            if (p + valueLen > data.size) throw IOException("Defekte Partiedaten (Tags)")
+            if (p + valueLen > data.size) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_tags))
             val value = decodeText(data, p, valueLen)
             p += valueLen
             if (tagName != null) tags[tagName] = value
@@ -207,7 +210,7 @@ object ScidFormat {
         }
 
         val game = if (fen != null) {
-            val pos = Position.fromFen(fen) ?: throw IOException("Ungültige FEN: $fen")
+            val pos = Position.fromFen(fen) ?: throw LocalizedIOException(R.string.err_invalid_fen, fen)
             Game(fen).also { g ->
                 // Scid verwendet die Figurenreihenfolge der FEN, auch für die Grundstellung
                 if (!g.hasCustomStart) replaceRootPosition(g, pos)
@@ -241,7 +244,7 @@ object ScidFormat {
     private fun indexOf0(data: ByteArray, from: Int): Int {
         var i = from
         while (i < data.size && data[i] != 0.toByte()) i++
-        if (i >= data.size) throw IOException("Defekte Partiedaten")
+        if (i >= data.size) throw LocalizedIOException(R.string.err_corrupt_game)
         return i
     }
 
@@ -256,11 +259,11 @@ object ScidFormat {
         val targets = ArrayList<CommentTarget>()
 
         loop@ while (true) {
-            if (p >= data.size) throw IOException("Defekte Partiedaten (Züge)")
+            if (p >= data.size) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_moves))
             val b = data[p++].toInt() and 0xFF
             when (b) {
                 ENCODE_NAG -> {
-                    if (p >= data.size) throw IOException("Defekte Partiedaten (NAG)")
+                    if (p >= data.size) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_nag))
                     val nag = data[p++].toInt() and 0xFF
                     if (!cur.isRoot && !atVarStart) cur.nags.add(nag)
                 }
@@ -275,20 +278,20 @@ object ScidFormat {
                     }
                 }
                 ENCODE_START_MARKER -> {
-                    if (cur.isRoot) throw IOException("Defekte Partiedaten (Variante)")
+                    if (cur.isRoot) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_variation))
                     stack.add(cur)
                     cur = cur.parent!!
                     atVarStart = true
                     pendingPre = null
                 }
                 ENCODE_END_MARKER -> {
-                    if (stack.isEmpty()) throw IOException("Defekte Partiedaten (Variantenende)")
+                    if (stack.isEmpty()) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_variation_end))
                     cur = stack.removeAt(stack.size - 1)
                     atVarStart = false
                     pendingPre = null
                 }
                 ENCODE_END_GAME -> {
-                    if (stack.isNotEmpty()) throw IOException("Defekte Partiedaten (Partieende)")
+                    if (stack.isNotEmpty()) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_game_end))
                     break@loop
                 }
                 else -> {
@@ -329,7 +332,7 @@ object ScidFormat {
         val c = pos.toMove
         val idx = b shr 4
         val code = b and 15
-        if (idx >= pos.count[c]) throw IOException("Defekte Partiedaten (Figurenindex)")
+        if (idx >= pos.count[c]) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_piece_index))
         val from = pos.list[c][idx]
         val to: Int
         var promo = EMPTY
@@ -343,12 +346,12 @@ object ScidFormat {
                 to = if (code >= 8) from - 7 * fd else from + 9 * fd
             }
             KNIGHT -> {
-                if (knightDiff[code] == 0) throw IOException("Defekter Springerzug")
+                if (knightDiff[code] == 0) throw LocalizedIOException(R.string.err_bad_knight)
                 to = from + knightDiff[code]
             }
             QUEEN, ROOK -> {
                 if (typeOf(pos.board[from]) == QUEEN && code == fileOf(from)) {
-                    if (p >= data.size) throw IOException("Defekter Damenzug")
+                    if (p >= data.size) throw LocalizedIOException(R.string.err_bad_queen)
                     to = (data[p++].toInt() and 0xFF) - 64
                 } else {
                     to = if (code >= 8) square(fileOf(from), code - 8) else square(code, rankOf(from))
@@ -362,15 +365,15 @@ object ScidFormat {
                         val rank = if (c == WHITE) 0 else 7
                         Move(from, square(if (code == 10) 6 else 2, rank), castle = if (code == 10) 1 else -1) to p
                     }
-                    else -> throw IOException("Defekter Königszug")
+                    else -> throw LocalizedIOException(R.string.err_bad_king)
                 }
             }
-            else -> throw IOException("Defekte Partiedaten (keine Figur)")
+            else -> throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_no_piece))
         }
-        if (to !in 0..63) throw IOException("Defekte Partiedaten (Zielfeld)")
+        if (to !in 0..63) throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_target))
         val target = pos.board[to]
         if (target != EMPTY && (typeOf(target) == KING || colorOf(target) == c)) {
-            throw IOException("Defekte Partiedaten (ungültiger Zug)")
+            throw LocalizedIOException(R.string.err_corrupt_game_detail, Text(R.string.detail_illegal))
         }
         return Move(from, to, promo) to p
     }

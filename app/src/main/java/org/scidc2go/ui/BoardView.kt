@@ -30,8 +30,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,12 +44,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.IntOffset
-import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.scidc2go.R
@@ -65,6 +65,7 @@ import org.scidc2go.chess.colorOf
 import org.scidc2go.chess.pieceOf
 import org.scidc2go.chess.square
 import org.scidc2go.chess.typeOf
+import kotlin.math.roundToInt
 
 private val LIGHT = Color(0xFFF0D9B5)
 private val DARK = Color(0xFFB58863)
@@ -246,7 +247,7 @@ fun BoardView(
         val color = pos.toMove
         AlertDialog(
             onDismissRequest = { promoChoices = emptyList() },
-            title = { Text("Umwandeln in") },
+            title = { Text(stringResource(R.string.promote_to)) },
             text = {
                 Row {
                     for (t in intArrayOf(QUEEN, ROOK, BISHOP, KNIGHT)) {
@@ -262,7 +263,7 @@ fun BoardView(
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton({ promoChoices = emptyList() }) { Text("Abbrechen") } },
+            dismissButton = { TextButton({ promoChoices = emptyList() }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }

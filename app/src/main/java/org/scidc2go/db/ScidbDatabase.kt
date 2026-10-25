@@ -21,7 +21,11 @@
  */
 package org.scidc2go.db
 
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
+import org.scidc2go.Text
 import org.scidc2go.chess.BISHOP
+import org.scidc2go.chess.BLACK
 import org.scidc2go.chess.EMPTY
 import org.scidc2go.chess.Game
 import org.scidc2go.chess.KING
@@ -33,7 +37,6 @@ import org.scidc2go.chess.Position
 import org.scidc2go.chess.QUEEN
 import org.scidc2go.chess.ROOK
 import org.scidc2go.chess.WHITE
-import org.scidc2go.chess.BLACK
 import org.scidc2go.chess.colorOf
 import org.scidc2go.chess.fileOf
 import org.scidc2go.chess.pieceOf
@@ -66,20 +69,17 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
     init {
         index = files.openRead("sci").use { it.readAll() }
         checkMagic(index, "Scidb.i")
-        if (index.size < HEADER_END) throw IOException("Defekte Scidb-Indexdatei")
+        if (index.size < HEADER_END) throw LocalizedIOException(R.string.err_scidb_index)
         val version = u16(index, 8)
         if (version != FILE_VERSION) {
-            throw IOException(
-                if (version < FILE_VERSION) "Alte Scidb-Version (). Bitte die Datenbank in Scidb öffnen und aktualisieren."
-                else "Unbekannte Scidb-Version ()",
-            )
+            throw LocalizedIOException(if (version < FILE_VERSION) R.string.err_scidb_old else R.string.err_scidb_version, version)
         }
         val numGames = u24(index, 10)
         gameCount = minOf(numGames, (index.size - HEADER_END) / ENTRY_SIZE)
 
         val nb = files.openRead("scn").use { it.readAll() }
         checkMagic(nb, "Scidb.n")
-        if (u16(nb, 8) != version) throw IOException("Scidb-Namensdatei passt nicht zur Indexdatei")
+        if (u16(nb, 8) != version) throw LocalizedIOException(R.string.err_scidb_names_mismatch)
         val r = Reader(nb, 10)
         r.u32() // Gesamtzahl
         var pl: Pair<Array<String>, IntArray>? = null
@@ -95,13 +95,13 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
                 'p' -> pl = readSection(r, size, nextId, SectionKind.PLAYER, null)
                 's' -> si = readSection(r, size, nextId, SectionKind.SITE, null)
                 'e' -> {
-                    val siteLk = si?.second ?: throw IOException("Defekte Scidb-Namensdatei")
+                    val siteLk = si?.second ?: throw LocalizedIOException(R.string.err_scidb_names)
                     val evSites = IntArray(size)
                     val res = readSection(r, size, nextId, SectionKind.EVENT, siteLk to evSites)
                     ev = Triple(res.first, res.second, evSites)
                 }
                 'a' -> an = readSection(r, size, nextId, SectionKind.NAME, null)
-                else -> throw IOException("Defekte Scidb-Namensdatei")
+                else -> throw LocalizedIOException(R.string.err_scidb_names)
             }
         }
         players = pl!!.first; playerLookup = pl.second
@@ -132,7 +132,7 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
             } else {
                 val prefix = r.u8()
                 val len = r.u8()
-                if (prefix > len || prefix > prev.size) throw IOException("Defekte Scidb-Namensdatei")
+                if (prefix > len || prefix > prev.size) throw LocalizedIOException(R.string.err_scidb_names)
                 cur = if (kind == SectionKind.NAME || prefix < len) {
                     val b = ByteArray(len)
                     System.arraycopy(prev, 0, b, 0, prefix)
@@ -251,7 +251,7 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
         val data = synchronized(gameFile) {
             val lenBytes = gameFile.readFully(e.gameOffset, 3)
             val len = u24(lenBytes, 0)
-            if (len < 3) throw IOException("Defekte Scidb-Partiedaten")
+            if (len < 3) throw LocalizedIOException(R.string.err_scidb_game)
             gameFile.readFully(e.gameOffset + 3, len - 3)
         }
         val game = ScidbGameDecoder(data).decode()
@@ -298,7 +298,7 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
         )
 
         private fun checkMagic(b: ByteArray, magic: String) {
-            if (b.size < 8 || String(b, 0, 7, Charsets.ISO_8859_1) != magic) throw IOException("Keine Scidb-Datei")
+            if (b.size < 8 || String(b, 0, 7, Charsets.ISO_8859_1) != magic) throw LocalizedIOException(R.string.err_not_scidb)
         }
 
         fun u16(b: ByteArray, p: Int) = ((b[p].toInt() and 0xFF) shl 8) or (b[p + 1].toInt() and 0xFF)
@@ -309,7 +309,7 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
 
 /** Sequentieller Big-Endian-Leser. */
 internal class Reader(val b: ByteArray, var p: Int = 0, val end: Int = b.size) {
-    private fun need(n: Int) { if (p + n > end) throw IOException("Unerwartetes Datenende") }
+    private fun need(n: Int) { if (p + n > end) throw LocalizedIOException(R.string.err_data_end) }
     fun u8(): Int { need(1); return b[p++].toInt() and 0xFF }
     fun peek(): Int { need(1); return b[p].toInt() and 0xFF }
     fun u16(): Int { need(2); val v = ScidbDatabase.u16(b, p); p += 2; return v }
@@ -320,7 +320,7 @@ internal class Reader(val b: ByteArray, var p: Int = 0, val end: Int = b.size) {
     fun string(): String {
         var e = p
         while (e < end && b[e] != 0.toByte()) e++
-        if (e >= end) throw IOException("Unerwartetes Datenende")
+        if (e >= end) throw LocalizedIOException(R.string.err_data_end)
         val s = decodeText(b, p, e - p)
         p = e + 1
         return s
@@ -365,7 +365,7 @@ class ScidbGameDecoder(private val rec: ByteArray) {
             squares = setupFen(fen, game.root.pos)
         }
         val dataOffset = strm.u24()
-        if (dataOffset > rec.size) throw IOException("Defekte Scidb-Partiedaten")
+        if (dataOffset > rec.size) throw LocalizedIOException(R.string.err_scidb_game)
         if (flags and TEXT_SECTION != 0) {
             val size = ScidbDatabase.u24(rec, dataOffset)
             text = Reader(rec, dataOffset + 3, dataOffset + 3 + size)
@@ -445,7 +445,7 @@ class ScidbGameDecoder(private val rec: ByteArray) {
             0 -> {}
             2 -> data.string()
             1 -> { data.skip(2); if (data.u8() and 0x80 != 0) data.skip(1) }
-            else -> throw IOException("Defekte Scidb-Markierung")
+            else -> throw LocalizedIOException(R.string.err_scidb_marker)
         }
     }
 
@@ -478,12 +478,12 @@ class ScidbGameDecoder(private val rec: ByteArray) {
                     when (strm.u8()) {
                         COMMENT -> line.end.flag = data.u8()
                         END_MARKER -> {}
-                        else -> throw IOException("Defekte Scidb-Partiedaten")
+                        else -> throw LocalizedIOException(R.string.err_scidb_game)
                     }
                     return
                 }
                 START_MARKER -> {
-                    if (pending == null || cur.isRoot) throw IOException("Defekte Scidb-Partiedaten")
+                    if (pending == null || cur.isRoot) throw LocalizedIOException(R.string.err_scidb_game)
                     val sub = SLine(null)
                     lastItem.vars.add(sub)
                     // Die Figurennummern stehen noch vor dem ausstehenden Zug
@@ -497,7 +497,7 @@ class ScidbGameDecoder(private val rec: ByteArray) {
                     if (data.peek() and 0x80 != 0) data.skip(moveInfoLength(data.peek())) else skipMark()
                 }
                 COMMENT -> lastItem.flag = data.u8()
-                else -> throw IOException("Defekte Scidb-Partiedaten")
+                else -> throw LocalizedIOException(R.string.err_scidb_game)
             }
         }
     }
@@ -536,9 +536,9 @@ class ScidbGameDecoder(private val rec: ByteArray) {
         val nyb = value and 15
         if (pos.toMove == BLACK) pieceNum = pieceNum or 0x10
         val from = s.sq[pieceNum]
-        if (from !in 0..63) throw IOException("Defekte Scidb-Partiedaten (Figur)")
+        if (from !in 0..63) throw LocalizedIOException(R.string.err_scidb_game_detail, Text(R.string.detail_piece))
         val piece = pos.board[from]
-        if (piece == EMPTY || colorOf(piece) != pos.toMove) throw IOException("Defekte Scidb-Partiedaten (Figur)")
+        if (piece == EMPTY || colorOf(piece) != pos.toMove) throw LocalizedIOException(R.string.err_scidb_game_detail, Text(R.string.detail_piece))
         val m: Move = when (typeOf(piece)) {
             KING -> when (nyb) {
                 14, 15 -> {
@@ -565,12 +565,12 @@ class ScidbGameDecoder(private val rec: ByteArray) {
                 if (nyb != 15 && rankOf(to) == last) Move(from, to, promoted[nyb].takeIf { it != EMPTY } ?: QUEEN)
                 else Move(from, to)
             }
-            else -> throw IOException("Defekte Scidb-Partiedaten")
+            else -> throw LocalizedIOException(R.string.err_scidb_game)
         }
         if (!m.isNull && m.castle == 0) {
             val t = pos.board[m.to]
             if (t != EMPTY && (colorOf(t) == pos.toMove || typeOf(t) == KING)) {
-                throw IOException("Defekte Scidb-Partiedaten (Zug)")
+                throw LocalizedIOException(R.string.err_scidb_game_detail, Text(R.string.detail_move))
             }
         }
         return m to pieceNum
@@ -638,7 +638,7 @@ class ScidbGameDecoder(private val rec: ByteArray) {
             s.rookNum[0] = 9; s.rookNum[1] = 15; s.rookNum[2] = 17; s.rookNum[3] = 23
             return g to s
         }
-        if (idn !in 1..960) throw IOException("Scidb-Variante (Stellung $idn) wird nicht unterstützt")
+        if (idn !in 1..960) throw LocalizedIOException(R.string.err_scidb_variant, idn)
         var n = idn % 960
         val rank = CharArray(8) { ' ' }
         rank[(n % 4) * 2 + 1] = 'B'; n /= 4
@@ -649,7 +649,7 @@ class ScidbGameDecoder(private val rec: ByteArray) {
         empties().forEachIndexed { i, f -> rank[f] = krn[i] }
         val back = String(rank)
         val fen = "${back.lowercase()}/pppppppp/8/8/8/8/PPPPPPPP/$back w KQkq - 0 1"
-        val pos = Position.fromFen(fen) ?: throw IOException("Ungültige Chess960-Stellung")
+        val pos = Position.fromFen(fen) ?: throw LocalizedIOException(R.string.err_invalid_960)
         val g = Game(pos.toFen())
         val s = Squares()
         s.sq[0] = g.root.pos.kingSq(WHITE)

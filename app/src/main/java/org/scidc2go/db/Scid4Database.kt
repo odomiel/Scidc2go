@@ -17,6 +17,8 @@
  */
 package org.scidc2go.db
 
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
 import org.scidc2go.chess.Game
 import java.io.IOException
 import java.nio.channels.FileChannel
@@ -44,10 +46,10 @@ class Scid4Database(private val files: DbFileSet, private val v3: Boolean = fals
     init {
         index = files.openRead(extIndex).use { it.readAll() }
         if (index.size < 8 + 2 + 4 + 3 || String(index, 0, 7, Charsets.ISO_8859_1) != "Scid.si") {
-            throw IOException("Keine Scid-Indexdatei")
+            throw LocalizedIOException(R.string.err_no_scid_index)
         }
         version = u16(index, 8)
-        if (version < 300 || version > 400) throw IOException("Unbekannte Scid-Version $version")
+        if (version < 300 || version > 400) throw LocalizedIOException(R.string.err_scid_version, version)
         val numGames = u24(index, 14)
         entrySize = if (version < 400) 46 else 47
         val headerSize = if (version < 400) 8 + 2 + 4 + 3 + 3 + 108 else 182
@@ -59,7 +61,7 @@ class Scid4Database(private val files: DbFileSet, private val v3: Boolean = fals
     }
 
     private fun readNames(d: ByteArray): Array<Array<String>> {
-        if (d.size < 44 || String(d, 0, 7, Charsets.ISO_8859_1) != "Scid.sn") throw IOException("Keine Scid-Namensdatei")
+        if (d.size < 44 || String(d, 0, 7, Charsets.ISO_8859_1) != "Scid.sn") throw LocalizedIOException(R.string.err_no_scid_names)
         var p = 12
         val num = IntArray(4) { u24(d, p + it * 3) }
         p += 12
@@ -79,7 +81,7 @@ class Scid4Database(private val files: DbFileSet, private val v3: Boolean = fals
                 }
                 val length = d[p++].toInt() and 0xFF
                 val prefix = if (i > 0) d[p++].toInt() and 0xFF else 0
-                if (prefix > length || prefix > prevLen) throw IOException("Defekte Namensdatei")
+                if (prefix > length || prefix > prevLen) throw LocalizedIOException(R.string.err_corrupt_names)
                 val newChars = length - prefix
                 System.arraycopy(d, p, buf, prefix, newChars)
                 p += newChars

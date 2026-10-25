@@ -22,6 +22,9 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import androidx.annotation.StringRes
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
 import org.scidc2go.db.Archives
 import org.scidc2go.db.ChessDatabase
 import org.scidc2go.db.CountingInputStream
@@ -35,15 +38,16 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.channels.FileChannel
 
-enum class DbFormat(val label: String, val mainExt: String, val exts: List<String>) {
-    SCID5("Scid 5", "si5", listOf("si5", "sg5", "sn5")),
-    SCID4("Scid 4", "si4", listOf("si4", "sg4", "sn4")),
-    SCID3("Scid 3", "si3", listOf("si3", "sg3", "sn3")),
-    SCIDB("Scidb", "sci", listOf("sci", "scg", "scn")),
-    PGN("PGN", "pgn", listOf("pgn")),
-    SCIDB_ARCHIVE("Scidb-Archiv", "scv", listOf("scv")),
-    PGN_GZ("PGN gzip", "pgn.gz", listOf("pgn.gz")),
-    PGN_ZIP("PGN zip", "zip", listOf("zip")),
+/** Datenbankformat; [label] ist der Anzeigename als String-Ressource. */
+enum class DbFormat(@StringRes val label: Int, val mainExt: String, val exts: List<String>) {
+    SCID5(R.string.fmt_scid5, "si5", listOf("si5", "sg5", "sn5")),
+    SCID4(R.string.fmt_scid4, "si4", listOf("si4", "sg4", "sn4")),
+    SCID3(R.string.fmt_scid3, "si3", listOf("si3", "sg3", "sn3")),
+    SCIDB(R.string.fmt_scidb, "sci", listOf("sci", "scg", "scn")),
+    PGN(R.string.fmt_pgn, "pgn", listOf("pgn")),
+    SCIDB_ARCHIVE(R.string.fmt_scidb_archive, "scv", listOf("scv")),
+    PGN_GZ(R.string.fmt_pgn_gz, "pgn.gz", listOf("pgn.gz")),
+    PGN_ZIP(R.string.fmt_pgn_zip, "zip", listOf("zip")),
 }
 
 /**
@@ -97,13 +101,13 @@ class SafFileSet(
         return openChannel(ctx, uri, true)
     }
 
-    private fun tree() = treeUri ?: throw IOException("Kein Ordnerzugriff: bitte den Ordner der Datenbank freigeben")
+    private fun tree() = treeUri ?: throw LocalizedIOException(R.string.err_grant_folder)
 
     private fun createFile(ext: String): Uri {
-        val tree = treeUri ?: throw IOException("$baseName.$ext fehlt")
+        val tree = treeUri ?: throw LocalizedIOException(R.string.err_missing_file, "$baseName.$ext")
         val parent = DocumentsContract.buildDocumentUriUsingTree(tree, folderId ?: DocumentsContract.getTreeDocumentId(tree))
         val uri = DocumentsContract.createDocument(ctx.contentResolver, parent, "application/octet-stream", "$baseName.$ext")
-            ?: throw IOException("Kann $baseName.$ext nicht anlegen")
+            ?: throw LocalizedIOException(R.string.err_cannot_create, "$baseName.$ext")
         files[ext] = uri
         return uri
     }
@@ -121,7 +125,7 @@ class SafFileSet(
         for (ext in exts) {
             val uri = files[ext] ?: continue
             files[ext] = DocumentsContract.renameDocument(ctx.contentResolver, uri, "$newBase.$ext")
-                ?: throw IOException("Kann $baseName.$ext nicht umbenennen")
+                ?: throw LocalizedIOException(R.string.err_cannot_rename, "$baseName.$ext")
         }
         baseName = newBase
     }
@@ -130,7 +134,7 @@ class SafFileSet(
         tree()
         for (ext in exts) {
             val uri = files.remove(ext) ?: continue
-            if (!DocumentsContract.deleteDocument(ctx.contentResolver, uri)) throw IOException("Kann $baseName.$ext nicht löschen")
+            if (!DocumentsContract.deleteDocument(ctx.contentResolver, uri)) throw LocalizedIOException(R.string.err_cannot_delete, "$baseName.$ext")
         }
     }
 }
@@ -260,11 +264,11 @@ object SafStorage {
                     DbFormat.SCIDB_ARCHIVE -> Archives.extractScidbArchive(inp, dir)
                     DbFormat.PGN_GZ -> Archives.extractGzip(inp, File(dir, "${entry.baseName}.pgn"))
                     else -> if (Archives.extractZipPgn(inp, File(dir, "${entry.baseName}.pgn")) == 0) {
-                        throw IOException("${entry.baseName}.zip enthält keine PGN-Datei")
+                        throw LocalizedIOException(R.string.err_zip_no_pgn, "${entry.baseName}.zip")
                     }
                 }
             }
-            return Archives.openExtracted(dir, entry.baseName, entry.format.label, progress)
+            return Archives.openExtracted(dir, entry.baseName, ctx.getString(entry.format.label), progress)
         } catch (e: Throwable) {
             dir.deleteRecursively()
             throw e
@@ -282,7 +286,7 @@ object SafStorage {
         val removed = Scid5Database.compact(SafFileSet(ctx, treeUri, entry.folderId, entry.baseName, entry.files))
         val folder = entry.folderId ?: DocumentsContract.getTreeDocumentId(treeUri)
         val fresh = listDatabases(ctx, treeUri, folder).firstOrNull { it.baseName == entry.baseName && it.format == entry.format }
-            ?: throw IOException("${entry.baseName} nach dem Komprimieren nicht gefunden")
+            ?: throw LocalizedIOException(R.string.err_not_found_after_compact, entry.baseName)
         return removed to fresh
     }
 

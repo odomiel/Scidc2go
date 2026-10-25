@@ -99,12 +99,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.text.input.KeyboardType
+import org.scidc2go.R
 import org.scidc2go.chess.Game
 import org.scidc2go.engine.StockfishNet
 import org.scidc2go.storage.DbEntry
@@ -150,16 +153,12 @@ fun Scidc2goApp(vm: AppViewModel) {
                     if (vm.netRequest) {
                         AlertDialog(
                             onDismissRequest = { vm.cancelNetRequest() },
-                            title = { Text("Stockfish-Netz laden") },
+                            title = { Text(stringResource(R.string.net_title)) },
                             text = {
-                                Text(
-                                    "Für die Analyse braucht Stockfish sein Bewertungsnetz " +
-                                        "(${StockfishNet.SIZE / 1_000_000} MB). Es wird einmalig von " +
-                                        "stockfishchess.org geladen, am besten im WLAN.",
-                                )
+                                Text(stringResource(R.string.net_text, (StockfishNet.SIZE / 1_000_000).toInt()))
                             },
-                            confirmButton = { TextButton({ vm.downloadNet() }) { Text("Laden") } },
-                            dismissButton = { TextButton({ vm.cancelNetRequest() }) { Text("Abbrechen") } },
+                            confirmButton = { TextButton({ vm.downloadNet() }) { Text(stringResource(R.string.net_download)) } },
+                            dismissButton = { TextButton({ vm.cancelNetRequest() }) { Text(stringResource(R.string.cancel)) } },
                         )
                     }
                     vm.busy?.let { label ->
@@ -202,10 +201,10 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
             TopAppBar(
                 title = { Text("Scidc2go") },
                 actions = {
-                    IconButton({ vm.refreshFolder() }) { Icon(Icons.Default.Refresh, "Aktualisieren") }
-                    IconButton({ pickFolder.launch(vm.folderUri) }) { Icon(Icons.Default.Folder, "Ordner wählen") }
-                    IconButton({ vm.refreshEngines(); settings = true }) { Icon(Icons.Default.Settings, "Einstellungen") }
-                    IconButton({ about = true }) { Icon(Icons.Default.Info, "Über") }
+                    IconButton({ vm.refreshFolder() }) { Icon(Icons.Default.Refresh, stringResource(R.string.refresh)) }
+                    IconButton({ pickFolder.launch(vm.folderUri) }) { Icon(Icons.Default.Folder, stringResource(R.string.choose_folder)) }
+                    IconButton({ vm.refreshEngines(); settings = true }) { Icon(Icons.Default.Settings, stringResource(R.string.settings)) }
+                    IconButton({ about = true }) { Icon(Icons.Default.Info, stringResource(R.string.about)) }
                 },
             )
         },
@@ -213,16 +212,15 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
     ) { pad ->
         Column(Modifier.padding(pad).fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton({ pickFiles.launch(arrayOf("*/*")) }) { Text("Dateien öffnen") }
-                FilledTonalButton({ vm.newGame(); vm.screen = Screen.BOARD }) { Text("Brett") }
-                FilledTonalButton({ newDbDialog = true }, enabled = vm.folderUri != null) { Text("Neue Scid-5-DB") }
+                FilledTonalButton({ pickFiles.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.open_files)) }
+                FilledTonalButton({ vm.newGame(); vm.screen = Screen.BOARD }) { Text(stringResource(R.string.board)) }
+                FilledTonalButton({ newDbDialog = true }, enabled = vm.folderUri != null) { Text(stringResource(R.string.new_scid5_db_short)) }
             }
             if (vm.folderUri == null) {
                 Column(Modifier.padding(24.dp)) {
-                    Text("Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN, auch gepackt). " +
-                        "Oder öffne einzelne Dateien.")
+                    Text(stringResource(R.string.choose_folder_hint))
                     Spacer(Modifier.height(12.dp))
-                    Button({ pickFolder.launch(null) }) { Text("Ordner wählen") }
+                    Button({ pickFolder.launch(null) }) { Text(stringResource(R.string.choose_folder)) }
                 }
             } else {
                 Text(
@@ -231,14 +229,14 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
                     style = MaterialTheme.typography.labelMedium,
                 )
                 if (vm.dbEntries.isEmpty()) {
-                    Text("Keine Datenbanken in diesem Ordner.", Modifier.padding(16.dp))
+                    Text(stringResource(R.string.no_databases), Modifier.padding(16.dp))
                 }
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(vm.dbEntries, key = { it.baseName + it.format }) { e ->
                         ListItem(
                             headlineContent = { Text(e.baseName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             supportingContent = { Text(formatSize(e.size)) },
-                            trailingContent = { AssistChip({ vm.openDatabase(e) }, { Text(e.format.label) }) },
+                            trailingContent = { AssistChip({ vm.openDatabase(e) }, { Text(stringResource(e.format.label)) }) },
                             modifier = Modifier.combinedClickable(onClick = { vm.openDatabase(e) }),
                         )
                         HorizontalDivider()
@@ -248,7 +246,7 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
         }
     }
     if (newDbDialog) {
-        NameDialog("Neue Scid-5-Datenbank", "Name", onDismiss = { newDbDialog = false }) {
+        NameDialog(stringResource(R.string.new_scid5_db), stringResource(R.string.name), onDismiss = { newDbDialog = false }) {
             newDbDialog = false
             vm.createScid5(it)
         }
@@ -261,17 +259,16 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
             title = { Text(e.baseName) },
             text = {
                 Text(
-                    "Eine ${e.format.label}-Datenbank besteht aus " +
-                        e.format.exts.joinToString(", ") { "${e.baseName}.$it" } +
-                        ". Damit die App die übrigen Dateien lesen kann, gib im nächsten Schritt einmalig den Ordner " +
-                        "frei („Diesen Ordner verwenden“). Danach öffnen sich Datenbanken aus diesem Ordner " +
-                        "und seinen Unterordnern direkt.",
+                    stringResource(
+                        R.string.sibling_text, stringResource(e.format.label),
+                        e.format.exts.joinToString(", ") { "${e.baseName}.$it" },
+                    ),
                 )
             },
             confirmButton = {
-                TextButton({ pickSiblingFolder.launch(e.files.values.first()) }) { Text("Weiter") }
+                TextButton({ pickSiblingFolder.launch(e.files.values.first()) }) { Text(stringResource(R.string.cont)) }
             },
-            dismissButton = { TextButton({ vm.cancelSiblingRequest() }) { Text("Abbrechen") } },
+            dismissButton = { TextButton({ vm.cancelSiblingRequest() }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -290,8 +287,8 @@ fun NameDialog(title: String, label: String, initial: String = "", onDismiss: ()
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { OutlinedTextField(text, { text = it }, label = { Text(label) }, singleLine = true) },
-        confirmButton = { TextButton({ onOk(text) }, enabled = text.isNotBlank()) { Text("OK") } },
-        dismissButton = { TextButton(onDismiss) { Text("Abbrechen") } },
+        confirmButton = { TextButton({ onOk(text) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.ok)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -299,31 +296,39 @@ fun NameDialog(title: String, label: String, initial: String = "", onDismiss: ()
 fun SettingsDialog(vm: AppViewModel, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Einstellungen") },
+        title = { Text(stringResource(R.string.settings)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Darstellung", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.settings_appearance), fontWeight = FontWeight.Bold)
                 for (m in ThemeMode.entries) {
-                    RadioRow(m.label, vm.themeMode == m) { vm.changeTheme(m) }
+                    RadioRow(stringResource(m.label), vm.themeMode == m) { vm.changeTheme(m) }
+                }
+                if (vm.languageSelectable) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(stringResource(R.string.settings_language), fontWeight = FontWeight.Bold)
+                    // Sprachnamen stehen immer in ihrer eigenen Sprache
+                    for ((tag, label) in listOf("" to stringResource(R.string.lang_system), "de" to "Deutsch", "en" to "English")) {
+                        RadioRow(label, vm.language == tag) { vm.changeLanguage(tag) }
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Engine", fontWeight = FontWeight.Bold)
-                RadioRow("Stockfish (eingebaut)", vm.engineId.isEmpty()) { vm.selectEngine("") }
+                Text(stringResource(R.string.settings_engine), fontWeight = FontWeight.Bold)
+                RadioRow(stringResource(R.string.engine_builtin), vm.engineId.isEmpty()) { vm.selectEngine("") }
                 for (e in vm.oexEngines) {
                     RadioRow(e.name, vm.engineId == e.id) { vm.selectEngine(e.id) }
                 }
                 Text(
                     if (vm.oexEngines.isEmpty()) {
-                        "Weitere Engines erscheinen hier, wenn Engine-Apps nach dem Open-Exchange-Standard (OEX) installiert sind."
+                        stringResource(R.string.oex_hint_none)
                     } else {
-                        "Weitere Engines stammen aus installierten Engine-Apps (Open Exchange)."
+                        stringResource(R.string.oex_hint)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
-        confirmButton = { TextButton(onDismiss) { Text("OK") } },
+        confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.ok)) } },
     )
 }
 
@@ -348,19 +353,18 @@ fun AboutDialog(onDismiss: () -> Unit) {
         title = { Text("Scidc2go $version") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Schachdatenbanken unterwegs: lesen von Scid 3/4/5, Scidb und PGN (auch Scidb-Archive .scv sowie PGN als .gz oder .zip), schreiben von Scid 5.")
+                Text(stringResource(R.string.about_text))
                 Spacer(Modifier.height(8.dp))
-                Text("Freie Software unter der GNU General Public License, Version 3 oder später. " +
-                    "Ohne Gewähr. Quelltext und Lizenztext liegen dem Projekt bei.")
+                Text(stringResource(R.string.about_license))
                 Spacer(Modifier.height(8.dp))
-                Text("Enthaltene freie Komponenten:", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.about_components), fontWeight = FontWeight.Bold)
                 Text("• Stockfish – GPLv3, stockfishchess.org")
-                Text("• Schachfiguren „cburnett“ von Colin M.L. Burnett – GPLv2+")
-                Text("• Datenbankformate nach den Quelltexten von Scid (GPL) und Scidb (GPL)")
+                Text(stringResource(R.string.about_pieces))
+                Text(stringResource(R.string.about_formats))
                 Text("• AndroidX / Jetpack Compose – Apache 2.0")
             }
         },
-        confirmButton = { TextButton(onDismiss) { Text("OK") } },
+        confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.ok)) } },
     )
 }
 
@@ -378,24 +382,24 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                     Column {
                         Text(db.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            "${db.formatName} · ${vm.filtered.size} / ${db.gameCount} Partien" +
-                                if (!db.writable) " · nur lesen" else "",
+                            pluralStringResource(R.plurals.games_subtitle, db.gameCount, db.formatName, vm.filtered.size, db.gameCount) +
+                                if (!db.writable) " · " + stringResource(R.string.read_only) else "",
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
                 },
                 navigationIcon = {
-                    IconButton({ vm.closeDatabase() }) { Icon(Icons.Default.Close, "Schließen") }
+                    IconButton({ vm.closeDatabase() }) { Icon(Icons.Default.Close, stringResource(R.string.close)) }
                 },
                 actions = {
                     var listMenu by remember { mutableStateOf(false) }
-                    IconButton({ listMenu = true }) { Icon(Icons.Default.MoreVert, "Menü") }
+                    IconButton({ listMenu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.menu)) }
                     DropdownMenu(listMenu, { listMenu = false }) {
-                        DropdownMenuItem({ Text("Markierte Partien löschen") }, enabled = db.writable,
+                        DropdownMenuItem({ Text(stringResource(R.string.delete_marked)) }, enabled = db.writable,
                             onClick = { listMenu = false; vm.requestDeleteMarked() })
-                        DropdownMenuItem({ Text("Datenbank komprimieren") }, enabled = vm.canCompact,
+                        DropdownMenuItem({ Text(stringResource(R.string.compact_db)) }, enabled = vm.canCompact,
                             onClick = { listMenu = false; vm.requestCompact() })
-                        DropdownMenuItem({ Text("In Scid 5 konvertieren") }, enabled = vm.canConvert,
+                        DropdownMenuItem({ Text(stringResource(R.string.convert_scid5)) }, enabled = vm.canConvert,
                             onClick = { listMenu = false; vm.requestConvert() })
                     }
                 },
@@ -407,10 +411,10 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
             OutlinedTextField(
                 vm.filterText, { vm.search(it) },
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                placeholder = { Text("Spieler, Turnier, Jahr, ECO …", maxLines = 1) },
+                placeholder = { Text(stringResource(R.string.search_hint), maxLines = 1) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = {
-                    if (vm.filterText.isNotEmpty()) IconButton({ vm.search("") }) { Icon(Icons.Default.Close, "Leeren") }
+                    if (vm.filterText.isNotEmpty()) IconButton({ vm.search("") }) { Icon(Icons.Default.Close, stringResource(R.string.clear)) }
                 },
                 singleLine = true,
             )
@@ -446,7 +450,7 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                                 Text(
                                     listOf(h.event, h.site, h.date.removeSuffix(".??.??").removeSuffix(".??"),
                                         h.round.takeIf { it != "?" }?.let { "R$it" }, h.eco.takeIf { it.isNotEmpty() },
-                                        if (h.plies > 0) "${(h.plies + 1) / 2} Z." else null)
+                                        if (h.plies > 0) stringResource(R.string.moves_short, (h.plies + 1) / 2) else null)
                                         .filterNotNull().filter { it != "?" && it.isNotEmpty() }.joinToString(" · "),
                                     style = MaterialTheme.typography.bodySmall,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -456,12 +460,12 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                             }
                             DropdownMenu(menuFor == idx, { menuFor = -1 }) {
                                 DropdownMenuItem(
-                                    { Text(if (h.deleted) "Löschmarkierung entfernen" else "Zum Löschen markieren") },
+                                    { Text(stringResource(if (h.deleted) R.string.unmark_delete else R.string.mark_delete)) },
                                     enabled = db.writable,
                                     onClick = { menuFor = -1; vm.toggleDeleted(idx) },
                                 )
                                 DropdownMenuItem(
-                                    { Text("Partie löschen") },
+                                    { Text(stringResource(R.string.delete_game)) },
                                     enabled = db.writable,
                                     onClick = { menuFor = -1; vm.requestDelete(listOf(idx)) },
                                 )
@@ -474,42 +478,41 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
         }
     }
     vm.convertRequest?.let { suggested ->
-        NameDialog("In Scid 5 konvertieren", "Name der neuen Datenbank", suggested,
+        NameDialog(stringResource(R.string.convert_scid5), stringResource(R.string.new_db_name), suggested,
             onDismiss = { vm.cancelConvert() }) { vm.confirmConvert(it) }
     }
     vm.compactRequest?.let { marked ->
         AlertDialog(
             onDismissRequest = { vm.cancelCompact() },
-            title = { Text("${db.name} komprimieren?") },
+            title = { Text(stringResource(R.string.compact_title, db.name)) },
             text = {
                 Text(
-                    (if (marked > 0) "$marked zum Löschen markierte Partie(n) werden endgültig entfernt. " else "") +
-                        "Ungenutzter Platz in der Partiedatei und nicht mehr verwendete Namen werden freigegeben. " +
-                        "Die App schreibt dazu eine neue Kopie und ersetzt das Original erst, wenn sie vollständig ist.",
+                    (if (marked > 0) pluralStringResource(R.plurals.compact_marked, marked, marked) + " " else "") +
+                        stringResource(R.string.compact_text),
                 )
             },
-            confirmButton = { TextButton({ vm.confirmCompact() }) { Text("Komprimieren") } },
-            dismissButton = { TextButton({ vm.cancelCompact() }) { Text("Abbrechen") } },
+            confirmButton = { TextButton({ vm.confirmCompact() }) { Text(stringResource(R.string.compact)) } },
+            dismissButton = { TextButton({ vm.cancelCompact() }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     if (vm.deleteRequest.isNotEmpty()) {
         val n = vm.deleteRequest.size
         AlertDialog(
             onDismissRequest = { vm.cancelDelete() },
-            title = { Text(if (n == 1) "Partie löschen?" else "$n Partien löschen?") },
+            title = { Text(pluralStringResource(R.plurals.delete_title, n, n)) },
             text = {
-                val what = if (n == 1) {
-                    val h = runCatching { db.header(vm.deleteRequest[0]) }.getOrNull()
-                    "Partie ${vm.deleteRequest[0] + 1}" + (h?.let { " (${it.white} – ${it.black})" } ?: "")
-                } else {
-                    "$n Partien"
-                }
-                Text("$what ${if (n == 1) "wird" else "werden"} endgültig aus ${db.name} entfernt. " +
-                    "Das lässt sich nicht rückgängig machen. " +
-                    "Die folgenden Partien rücken in der Nummerierung nach vorn.")
+                Text(
+                    if (n == 1) {
+                        val h = runCatching { db.header(vm.deleteRequest[0]) }.getOrNull()
+                        stringResource(R.string.delete_one_text, vm.deleteRequest[0] + 1,
+                            h?.let { " (${it.white} – ${it.black})" } ?: "", db.name)
+                    } else {
+                        stringResource(R.string.delete_many_text, n, db.name)
+                    },
+                )
             },
-            confirmButton = { TextButton({ vm.confirmDelete() }) { Text("Löschen") } },
-            dismissButton = { TextButton({ vm.cancelDelete() }) { Text("Abbrechen") } },
+            confirmButton = { TextButton({ vm.confirmDelete() }) { Text(stringResource(R.string.delete)) } },
+            dismissButton = { TextButton({ vm.cancelDelete() }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -539,7 +542,7 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                             style = MaterialTheme.typography.titleMedium)
                         Text(
                             listOf(game.event, game.date, game.result).filter { it != "?" }.joinToString(" · ") +
-                                if (vm.dirty) " · geändert" else "",
+                                if (vm.dirty) " · " + stringResource(R.string.modified) else "",
                             style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -547,52 +550,52 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                 navigationIcon = {
                     if (!wide || vm.db == null) {
                         IconButton({ vm.screen = if (vm.db != null) Screen.GAMES else Screen.FILES }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                         }
                     }
                 },
                 actions = {
-                    IconButton({ saveDialog = true }) { Icon(Icons.Default.Save, "Speichern") }
-                    IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, "Menü") }
+                    IconButton({ saveDialog = true }) { Icon(Icons.Default.Save, stringResource(R.string.save)) }
+                    IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.menu)) }
                     DropdownMenu(menu, { menu = false }) {
                         DropdownMenuItem(
-                            { Text("Analyse (${vm.engineLabel})") },
+                            { Text(stringResource(R.string.analysis_menu, vm.engineLabel)) },
                             trailingIcon = { Switch(vm.engineOn, onCheckedChange = null) },
                             onClick = { menu = false; vm.toggleEngine() },
                         )
                         DropdownMenuItem(
-                            { Text("Kommentare anzeigen") },
+                            { Text(stringResource(R.string.show_comments)) },
                             trailingIcon = { Switch(vm.showComments, onCheckedChange = null) },
                             onClick = { menu = false; vm.toggleComments() },
                         )
                         DropdownMenuItem(
-                            { Text("Varianten anzeigen") },
+                            { Text(stringResource(R.string.show_variations)) },
                             trailingIcon = { Switch(vm.showVariations, onCheckedChange = null) },
                             onClick = { menu = false; vm.toggleVariations() },
                         )
                         HorizontalDivider()
-                        DropdownMenuItem({ Text("Neue Partie") }, onClick = { menu = false; vm.newGame() })
-                        DropdownMenuItem({ Text("Partiedaten bearbeiten") }, onClick = { menu = false; tagDialog = true })
-                        DropdownMenuItem({ Text("Kommentar zum Zug") }, enabled = !node.isRoot || true,
+                        DropdownMenuItem({ Text(stringResource(R.string.new_game)) }, onClick = { menu = false; vm.newGame() })
+                        DropdownMenuItem({ Text(stringResource(R.string.edit_tags)) }, onClick = { menu = false; tagDialog = true })
+                        DropdownMenuItem({ Text(stringResource(R.string.comment_move)) }, enabled = !node.isRoot || true,
                             onClick = { menu = false; commentDialog = true })
-                        DropdownMenuItem({ Text("Variante zur Hauptvariante") }, enabled = !node.isRoot,
+                        DropdownMenuItem({ Text(stringResource(R.string.promote_variation)) }, enabled = !node.isRoot,
                             onClick = { menu = false; vm.promoteVariation(node) })
-                        DropdownMenuItem({ Text("Variante löschen") }, enabled = !node.isRoot,
+                        DropdownMenuItem({ Text(stringResource(R.string.delete_variation)) }, enabled = !node.isRoot,
                             onClick = { menu = false; vm.deleteVariation(node) })
-                        DropdownMenuItem({ Text("Restliche Züge ab hier löschen") }, enabled = !node.isRoot,
+                        DropdownMenuItem({ Text(stringResource(R.string.truncate)) }, enabled = !node.isRoot,
                             onClick = { menu = false; vm.truncateFrom(node) })
-                        DropdownMenuItem({ Text("PGN kopieren") }, onClick = {
+                        DropdownMenuItem({ Text(stringResource(R.string.copy_pgn)) }, onClick = {
                             menu = false
                             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             cm.setPrimaryClip(ClipData.newPlainText("PGN", vm.pgnText()))
-                            vm.message = "PGN in die Zwischenablage kopiert"
+                            vm.message = ctx.getString(R.string.pgn_copied)
                         })
-                        DropdownMenuItem({ Text("PGN einfügen") }, onClick = { menu = false; pasteDialog = true })
-                        DropdownMenuItem({ Text("FEN kopieren") }, onClick = {
+                        DropdownMenuItem({ Text(stringResource(R.string.paste_pgn)) }, onClick = { menu = false; pasteDialog = true })
+                        DropdownMenuItem({ Text(stringResource(R.string.copy_fen)) }, onClick = {
                             menu = false
                             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             cm.setPrimaryClip(ClipData.newPlainText("FEN", node.pos.toFen()))
-                            vm.message = "FEN kopiert"
+                            vm.message = ctx.getString(R.string.fen_copied)
                         })
                     }
                 },
@@ -650,7 +653,7 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
     if (tagDialog) TagDialog(game, onDismiss = { tagDialog = false }) { tagDialog = false; vm.updateTags(it) }
     if (saveDialog) SaveDialog(vm) { saveDialog = false }
     if (commentDialog) {
-        NameDialog("Kommentar", "Text", node.comment, onDismiss = { commentDialog = false }) {
+        NameDialog(stringResource(R.string.comment), stringResource(R.string.text), node.comment, onDismiss = { commentDialog = false }) {
             commentDialog = false
             vm.setComment(node, it)
         }
@@ -663,11 +666,11 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
 @Composable
 private fun NavBar(vm: AppViewModel) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        IconButton({ vm.toStart() }) { Icon(Icons.Default.SkipPrevious, "Anfang") }
-        IconButton({ vm.back() }) { Icon(Icons.AutoMirrored.Filled.NavigateBefore, "Zurück") }
-        IconButton({ vm.forward() }) { Icon(Icons.AutoMirrored.Filled.NavigateNext, "Vor") }
-        IconButton({ vm.toEnd() }) { Icon(Icons.Default.SkipNext, "Ende") }
-        IconButton({ vm.flipped = !vm.flipped }) { Icon(Icons.Default.SwapVert, "Brett drehen") }
+        IconButton({ vm.toStart() }) { Icon(Icons.Default.SkipPrevious, stringResource(R.string.nav_start)) }
+        IconButton({ vm.back() }) { Icon(Icons.AutoMirrored.Filled.NavigateBefore, stringResource(R.string.back)) }
+        IconButton({ vm.forward() }) { Icon(Icons.AutoMirrored.Filled.NavigateNext, stringResource(R.string.nav_forward)) }
+        IconButton({ vm.toEnd() }) { Icon(Icons.Default.SkipNext, stringResource(R.string.nav_end)) }
+        IconButton({ vm.flipped = !vm.flipped }) { Icon(Icons.Default.SwapVert, stringResource(R.string.flip_board)) }
     }
 }
 
@@ -696,7 +699,7 @@ private fun EnginePanel(vm: AppViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             val depth = vm.engineLines.firstOrNull()?.depth
             Text(
-                "${vm.engineName}${depth?.let { " · Tiefe $it" } ?: ""}",
+                "${vm.engineName}${depth?.let { " · " + stringResource(R.string.depth, it) } ?: ""}",
                 Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -725,28 +728,29 @@ private fun EnginePanel(vm: AppViewModel) {
 private fun TagDialog(game: Game, onDismiss: () -> Unit, onOk: (Map<String, String>) -> Unit) {
     val keys = listOf("White", "WhiteElo", "Black", "BlackElo", "Event", "Site", "Date", "Round", "Result", "ECO", "Annotator")
     val labels = mapOf(
-        "White" to "Weiß", "WhiteElo" to "Elo Weiß", "Black" to "Schwarz", "BlackElo" to "Elo Schwarz",
-        "Event" to "Turnier", "Site" to "Ort", "Date" to "Datum (JJJJ.MM.TT)", "Round" to "Runde",
-        "Result" to "Ergebnis (1-0, 0-1, 1/2-1/2, *)", "ECO" to "ECO", "Annotator" to "Kommentator",
+        "White" to R.string.tag_white, "WhiteElo" to R.string.tag_white_elo, "Black" to R.string.tag_black,
+        "BlackElo" to R.string.tag_black_elo, "Event" to R.string.tag_event, "Site" to R.string.tag_site,
+        "Date" to R.string.tag_date, "Round" to R.string.tag_round, "Result" to R.string.tag_result,
+        "ECO" to R.string.tag_eco, "Annotator" to R.string.tag_annotator,
     )
     val values = remember { keys.associateWith { mutableStateOf(game.tags[it] ?: "") } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Partiedaten") },
+        title = { Text(stringResource(R.string.game_data)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 for (k in keys) {
                     val st = values.getValue(k)
                     OutlinedTextField(
                         st.value, { st.value = it }, Modifier.fillMaxWidth(),
-                        label = { Text(labels[k] ?: k) }, singleLine = true,
+                        label = { Text(labels[k]?.let { stringResource(it) } ?: k) }, singleLine = true,
                         keyboardOptions = if (k.endsWith("Elo")) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
                     )
                 }
             }
         },
-        confirmButton = { TextButton({ onOk(values.mapValues { it.value.value }) }) { Text("OK") } },
-        dismissButton = { TextButton(onDismiss) { Text("Abbrechen") } },
+        confirmButton = { TextButton({ onOk(values.mapValues { it.value.value }) }) { Text(stringResource(R.string.ok)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -755,33 +759,33 @@ private fun SaveDialog(vm: AppViewModel, onDismiss: () -> Unit) {
     var newName by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Partie speichern") },
+        title = { Text(stringResource(R.string.save_game)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (vm.canSaveInPlace) {
                     if (vm.gameIndex >= 0) {
-                        TextButton({ onDismiss(); vm.save() }) { Text("Partie ${vm.gameIndex + 1} ersetzen") }
+                        TextButton({ onDismiss(); vm.save() }) { Text(stringResource(R.string.replace_game, vm.gameIndex + 1)) }
                     }
-                    TextButton({ onDismiss(); vm.save(asNew = true) }) { Text("Als neue Partie in ${vm.db?.name}") }
+                    TextButton({ onDismiss(); vm.save(asNew = true) }) { Text(stringResource(R.string.save_as_new, vm.db?.name ?: "")) }
                     HorizontalDivider()
                 }
-                Text("In Scid-5-Datenbank:", Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
-                if (vm.folderUri == null) Text("Kein Ordner gewählt.")
+                Text(stringResource(R.string.into_scid5), Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.labelLarge)
+                if (vm.folderUri == null) Text(stringResource(R.string.no_folder))
                 for (e: DbEntry in vm.writableTargets) {
                     TextButton({ onDismiss(); vm.saveTo(e) }) { Text(e.baseName) }
                 }
                 if (vm.folderUri != null) {
                     TextButton({ newName = "" }) {
-                        Icon(Icons.Default.Add, null); Text("Neue Scid-5-Datenbank …")
+                        Icon(Icons.Default.Add, null); Text(stringResource(R.string.new_scid5_db_dots))
                     }
                 }
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onDismiss) { Text("Abbrechen") } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
     if (newName != null) {
-        NameDialog("Neue Scid-5-Datenbank", "Name", onDismiss = { newName = null }) { name ->
+        NameDialog(stringResource(R.string.new_scid5_db), stringResource(R.string.name), onDismiss = { newName = null }) { name ->
             newName = null
             onDismiss()
             vm.createAndSave(name)
@@ -798,11 +802,11 @@ private fun PasteDialog(onDismiss: () -> Unit, onOk: (String) -> Unit) {
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("PGN einfügen") },
+        title = { Text(stringResource(R.string.paste_pgn)) },
         text = {
             OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth().height(240.dp), label = { Text("PGN") })
         },
-        confirmButton = { TextButton({ onOk(text) }, enabled = text.isNotBlank()) { Text("Laden") } },
-        dismissButton = { TextButton(onDismiss) { Text("Abbrechen") } },
+        confirmButton = { TextButton({ onOk(text) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.load)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

@@ -22,6 +22,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
 import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.IOException
@@ -88,10 +90,10 @@ object OexEngines {
             exe.setWritable(true)
             val tmp = File(dir, "${e.fileName}.tmp")
             val uri = Uri.parse("content://${e.authority}/${e.fileName}")
-            (ctx.contentResolver.openInputStream(uri) ?: throw IOException("${e.name} nicht lesbar")).use { input ->
+            (ctx.contentResolver.openInputStream(uri) ?: throw LocalizedIOException(R.string.err_engine_unreadable, e.name)).use { input ->
                 tmp.outputStream().use { input.copyTo(it) }
             }
-            if (!tmp.renameTo(exe)) throw IOException("${e.name} kann nicht kopiert werden")
+            if (!tmp.renameTo(exe)) throw LocalizedIOException(R.string.err_engine_copy, e.name)
             exe.setReadOnly()
             marker.writeText(stamp.toString())
         }
@@ -101,8 +103,8 @@ object OexEngines {
     /** 32- oder 64-Bit-Linker je nach ELF-Klasse der Datei. */
     private fun linkerFor(exe: File): String {
         val header = ByteArray(5)
-        exe.inputStream().use { if (it.read(header) < 5) throw IOException("${exe.name} ist keine Engine") }
-        if (header[0] != 0x7f.toByte() || header[1] != 'E'.code.toByte()) throw IOException("${exe.name} ist keine Engine")
+        exe.inputStream().use { if (it.read(header) < 5) throw LocalizedIOException(R.string.err_not_engine, exe.name) }
+        if (header[0] != 0x7f.toByte() || header[1] != 'E'.code.toByte()) throw LocalizedIOException(R.string.err_not_engine, exe.name)
         return if (header[4].toInt() == 2) "/system/bin/linker64" else "/system/bin/linker"
     }
 }

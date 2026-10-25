@@ -17,6 +17,8 @@
  */
 package org.scidc2go.db
 
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FilterInputStream
@@ -43,23 +45,23 @@ object Archives {
      */
     fun extractScidbArchive(input: InputStream, dir: File): List<String> {
         val inp = input.buffered()
-        if (inp.readLine() != "iveArch") throw IOException("Kein Scidb-Archiv")
+        if (inp.readLine() != "iveArch") throw LocalizedIOException(R.string.err_not_scv)
         var line = inp.readLine()
         while (line != null && line != HEAD) line = inp.readLine()
         val names = ArrayList<String>()
         while (line != null) {
-            if (line != HEAD) throw IOException("Scidb-Archiv ist beschädigt")
+            if (line != HEAD) throw LocalizedIOException(R.string.err_scv_corrupt)
             val attrs = HashMap<String, String>()
             while (true) {
-                line = inp.readLine() ?: throw IOException("Scidb-Archiv ist beschädigt")
+                line = inp.readLine() ?: throw LocalizedIOException(R.string.err_scv_corrupt)
                 if (line == DATA) break
                 ATTR.matchEntire(line)?.let { attrs[it.groupValues[1]] = it.groupValues[2].trim() }
             }
-            val fileName = attrs["FileName"] ?: throw IOException("Scidb-Archiv: Dateiname fehlt")
-            val size = attrs["Size"]?.toLongOrNull() ?: throw IOException("Scidb-Archiv: Größe fehlt")
+            val fileName = attrs["FileName"] ?: throw LocalizedIOException(R.string.err_scv_no_name)
+            val size = attrs["Size"]?.toLongOrNull() ?: throw LocalizedIOException(R.string.err_scv_no_size)
             // Nur den Dateinamen übernehmen, damit nichts außerhalb von dir landet
             val name = File(fileName.replace('\\', '/')).name
-            if (name.isEmpty() || name == "." || name == "..") throw IOException("Ungültiger Dateiname: $fileName")
+            if (name.isEmpty() || name == "." || name == "..") throw LocalizedIOException(R.string.err_bad_filename, fileName)
             val stored = LimitedInputStream(inp, size)
             val crc = CRC32()
             val checked = CheckedInputStream(stored, crc)
@@ -67,13 +69,13 @@ object Archives {
                 when (val c = attrs["Compression"] ?: "raw") {
                     "raw" -> checked.copyTo(out)
                     "zlib" -> InflaterInputStream(checked).copyTo(out)
-                    else -> throw IOException("$name: unbekannte Kompression $c")
+                    else -> throw LocalizedIOException(R.string.err_unknown_compression, name, c)
                 }
             }
             // Rest nach dem zlib-Ende überspringen; er zählt zur Prüfsumme
             checked.skip(Long.MAX_VALUE)
             attrs["Checksum"]?.toLongOrNull()?.let {
-                if ((it and 0xFFFFFFFFL) != crc.value) throw IOException("$name: Prüfsumme falsch")
+                if ((it and 0xFFFFFFFFL) != crc.value) throw LocalizedIOException(R.string.err_checksum_file, name)
             }
             names.add(name)
             inp.readLine()          // Zeilenende nach den Daten
@@ -121,7 +123,7 @@ object Archives {
                 pgn(out)
             }
             ?: find("pgn")?.let { pgn(File(dir, it)) }
-            ?: throw IOException("Das Archiv enthält keine lesbare Datenbank")
+            ?: throw LocalizedIOException(R.string.err_archive_no_db)
         return ArchiveDatabase(inner, dir, name, archiveFormat)
     }
 
@@ -146,7 +148,7 @@ private class LimitedInputStream(inp: InputStream, private var limit: Long) : Fi
     override fun read(): Int {
         if (limit <= 0) return -1
         val b = super.read()
-        if (b < 0) throw IOException("Unerwartetes Dateiende")
+        if (b < 0) throw LocalizedIOException(R.string.err_eof)
         limit--
         return b
     }
@@ -154,7 +156,7 @@ private class LimitedInputStream(inp: InputStream, private var limit: Long) : Fi
     override fun read(b: ByteArray, off: Int, len: Int): Int {
         if (limit <= 0) return -1
         val n = super.read(b, off, minOf(len.toLong(), limit).toInt())
-        if (n < 0) throw IOException("Unerwartetes Dateiende")
+        if (n < 0) throw LocalizedIOException(R.string.err_eof)
         limit -= n
         return n
     }

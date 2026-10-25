@@ -17,6 +17,8 @@
  */
 package org.scidc2go.db
 
+import org.scidc2go.LocalizedIOException
+import org.scidc2go.R
 import org.scidc2go.chess.Game
 import java.io.Closeable
 import java.io.IOException
@@ -51,16 +53,16 @@ interface ChessDatabase : Closeable {
     fun loadGame(index: Int): Game
 
     /** Fügt eine Partie an; liefert ihren Index. */
-    fun addGame(game: Game): Int = throw IOException("Datenbank ist schreibgeschützt")
+    fun addGame(game: Game): Int = throw LocalizedIOException(R.string.err_read_only)
 
     /** Ersetzt die Partie [index]. */
-    fun replaceGame(index: Int, game: Game): Unit = throw IOException("Datenbank ist schreibgeschützt")
+    fun replaceGame(index: Int, game: Game): Unit = throw LocalizedIOException(R.string.err_read_only)
 
     /** Setzt oder löscht die Löschmarkierung. */
-    fun setDeleted(index: Int, deleted: Boolean): Unit = throw IOException("Datenbank ist schreibgeschützt")
+    fun setDeleted(index: Int, deleted: Boolean): Unit = throw LocalizedIOException(R.string.err_read_only)
 
     /** Entfernt die Partien [indices] endgültig; die folgenden Partien rücken nach vorn. */
-    fun deleteGames(indices: Collection<Int>): Unit = throw IOException("Datenbank ist schreibgeschützt")
+    fun deleteGames(indices: Collection<Int>): Unit = throw LocalizedIOException(R.string.err_read_only)
 }
 
 /**
@@ -75,11 +77,11 @@ interface DbFileSet {
     fun openWrite(ext: String): FileChannel
 
     /** Dateien einer anderen Datenbank [baseName] im selben Ordner. */
-    fun sibling(baseName: String): DbFileSet = throw IOException("Kein Ordnerzugriff")
+    fun sibling(baseName: String): DbFileSet = throw LocalizedIOException(R.string.err_no_folder_access)
     /** Benennt die vorhandenen Dateien mit den Endungen [exts] auf den Basisnamen [newBase] um. */
-    fun rename(newBase: String, exts: Collection<String>): Unit = throw IOException("Kein Ordnerzugriff")
+    fun rename(newBase: String, exts: Collection<String>): Unit = throw LocalizedIOException(R.string.err_no_folder_access)
     /** Löscht die vorhandenen Dateien mit den Endungen [exts]. */
-    fun delete(exts: Collection<String>): Unit = throw IOException("Kein Ordnerzugriff")
+    fun delete(exts: Collection<String>): Unit = throw LocalizedIOException(R.string.err_no_folder_access)
 }
 
 class JavaFileSet(private val dir: java.io.File, baseName: String) : DbFileSet {
@@ -95,12 +97,12 @@ class JavaFileSet(private val dir: java.io.File, baseName: String) : DbFileSet {
     override fun rename(newBase: String, exts: Collection<String>) {
         for (ext in exts) {
             val f = file(ext)
-            if (f.exists() && !f.renameTo(java.io.File(dir, "$newBase.$ext"))) throw IOException("Kann ${f.name} nicht umbenennen")
+            if (f.exists() && !f.renameTo(java.io.File(dir, "$newBase.$ext"))) throw LocalizedIOException(R.string.err_cannot_rename, f.name)
         }
         baseName = newBase
     }
     override fun delete(exts: Collection<String>) {
-        for (ext in exts) file(ext).let { if (it.exists() && !it.delete()) throw IOException("Kann ${it.name} nicht löschen") }
+        for (ext in exts) file(ext).let { if (it.exists() && !it.delete()) throw LocalizedIOException(R.string.err_cannot_delete, it.name) }
     }
 }
 
@@ -109,7 +111,7 @@ internal fun FileChannel.readFully(offset: Long, length: Int): ByteArray {
     var pos = offset
     while (buf.hasRemaining()) {
         val n = read(buf, pos)
-        if (n < 0) throw IOException("Unerwartetes Dateiende")
+        if (n < 0) throw LocalizedIOException(R.string.err_eof)
         pos += n
     }
     return buf.array()
@@ -123,7 +125,7 @@ internal fun FileChannel.writeFully(offset: Long, data: ByteArray, off: Int = 0,
 
 internal fun FileChannel.readAll(): ByteArray {
     val sz = size()
-    if (sz > Int.MAX_VALUE - 16) throw IOException("Datei zu groß")
+    if (sz > Int.MAX_VALUE - 16) throw LocalizedIOException(R.string.err_file_too_large)
     return readFully(0, sz.toInt())
 }
 

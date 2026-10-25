@@ -1,5 +1,7 @@
 # Scidc2go
 
+*[English version](README.en.md)*
+
 Schachdatenbanken unterwegs: eine schlanke Android-App für Smartphone und Tablet.
 
 - **Lesen:** Scid 3 (`.si3`), Scid 4 (`.si4`), Scid 5 (`.si5`), Scidb (`.sci`, Dateiversion 94), PGN,
@@ -9,6 +11,7 @@ Schachdatenbanken unterwegs: eine schlanke Android-App für Smartphone und Table
   Einschalten der Analyse einmalig von stockfishchess.org; nur dafür braucht sie die Internet-Berechtigung.
 - **Ansichten:** Datenbankliste mit Suche und Brettansicht mit Zugliste, Varianten, Kommentaren und Bewertungszeichen.
   Auf Tablets (ab 840 dp Breite) stehen Partieliste und Brett nebeneinander.
+- **Sprachen:** Deutsch und Englisch, nach der Systemsprache oder in den Einstellungen wählbar.
 
 Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne proprietäre Bestandteile.
 
@@ -45,7 +48,8 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    - Menü: Partiedaten, Kommentar, Variante hochstufen oder löschen, PGN/FEN kopieren, PGN einfügen.
    - **Speichern**: in die geöffnete Scid-5-Datenbank (ersetzen oder neu) oder in eine andere bzw. neue Scid-5-Datenbank im Ordner.
 
-4. **Einstellungen** (Zahnrad): Darstellung hell, dunkel oder wie im System, und die Engine für die Analyse.
+4. **Einstellungen** (Zahnrad): Darstellung hell, dunkel oder wie im System, die Sprache (Deutsch, Englisch oder
+   wie im System; ab Android 13, davor gilt die Systemsprache) und die Engine für die Analyse.
    Neben dem eingebauten Stockfish erscheinen dort Engines aus installierten Engine-Apps nach dem
    Open-Exchange-Standard (OEX). Weil Android 10 und neuer Apps keine Programme aus ihrem Datenverzeichnis
    starten lässt, kopiert die App solche Engines und startet sie über den System-Linker (`/system/bin/linker64`).
@@ -75,6 +79,9 @@ keyPassword=…
 ```
 
 `tools/svg2vector.py` wandelt die Figuren-SVGs in Android-Vektorgrafiken um.
+
+Die Texte der Oberfläche stehen in `app/src/main/res/values/strings.xml` (Englisch, die Vorgabe) und
+`app/src/main/res/values-de/strings.xml` (Deutsch). Quelltext-Kommentare und Commit-Nachrichten sind deutsch.
 
 ## Kompatibilität und Tests
 
