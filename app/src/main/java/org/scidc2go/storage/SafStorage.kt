@@ -44,6 +44,10 @@ enum class DbFormat(val label: String, val mainExt: String, val exts: List<Strin
     SCIDB_ARCHIVE("Scidb-Archiv", "scv", listOf("scv")),
     PGN_GZ("PGN gzip", "pgn.gz", listOf("pgn.gz")),
     PGN_ZIP("PGN zip", "zip", listOf("zip")),
+    ;
+
+    /** Kann Scidc2go in dieses Format schreiben (beim Scidb-Archiv nur, wenn es eine Scid-5-Datenbank enthält)? */
+    val writable get() = this == SCID5 || this == SCIDB_ARCHIVE
 }
 
 /**
@@ -234,7 +238,7 @@ object SafStorage {
             DbFormat.SCID3 -> Scid4Database(fs, v3 = true)
             DbFormat.SCIDB -> ScidbDatabase(fs)
             DbFormat.PGN -> PgnDatabase(entry.baseName, fs.openRead("pgn"), progress)
-            DbFormat.SCIDB_ARCHIVE, DbFormat.PGN_GZ, DbFormat.PGN_ZIP -> openArchive(ctx, entry, progress)
+            DbFormat.SCIDB_ARCHIVE, DbFormat.PGN_GZ, DbFormat.PGN_ZIP -> openArchive(ctx, treeUri, entry, writable, progress)
         }
     }
 
@@ -246,8 +250,14 @@ object SafStorage {
         archiveDir(ctx).deleteRecursively()
     }
 
-    /** Entpackt das Archiv [entry] in ein eigenes Verzeichnis im Cache und öffnet die Datenbank darin. */
-    private fun openArchive(ctx: Context, entry: DbEntry, progress: (Float) -> Unit): ChessDatabase {
+    /**
+     * Entpackt das Archiv [entry] in ein eigenes Verzeichnis im Cache und öffnet die Datenbank darin.
+     * Ein Scidb-Archiv mit einer Scid-5-Datenbank ist mit [writable] und Ordnerzugriff schreibbar;
+     * nach jeder Änderung wird es neu gepackt.
+     */
+    private fun openArchive(
+        ctx: Context, treeUri: Uri?, entry: DbEntry, writable: Boolean, progress: (Float) -> Unit,
+    ): ChessDatabase {
         val ext = entry.format.mainExt
         val uri = entry.files[ext] ?: throw FileNotFoundException("${entry.baseName}.$ext")
         val parent = archiveDir(ctx).apply { mkdirs() }
@@ -264,7 +274,15 @@ object SafStorage {
                     }
                 }
             }
-            return Archives.openExtracted(dir, entry.baseName, entry.format.label, progress)
+            val repack = if (writable && treeUri != null && entry.format == DbFormat.SCIDB_ARCHIVE) {
+                var target: DbFileSet = SafFileSet(ctx, treeUri, entry.folderId, entry.baseName, entry.files)
+                val pack = { db: ChessDatabase ->
+                    val files = dir.listFiles()?.sortedBy { it.name } ?: emptyList()
+                    target = Archives.writeScidbArchiveFile(target, files, db.gameCount, archiveDir(ctx))
+                }
+                pack
+            } else null
+            return Archives.openExtracted(dir, entry.baseName, entry.format.label, progress, repack)
         } catch (e: Throwable) {
             dir.deleteRecursively()
             throw e
@@ -286,10 +304,10 @@ object SafStorage {
         return removed to fresh
     }
 
-    /** Gibt es im Ordner [folderId] (null = oberster Ordner) schon Dateien der Scid-5-Datenbank [baseName]? */
-    fun scid5Exists(ctx: Context, treeUri: Uri, folderId: String?, baseName: String): Boolean =
+    /** Gibt es im Ordner [folderId] (null = oberster Ordner) schon Dateien der Datenbank [baseName] im Format [format]? */
+    fun exists(ctx: Context, treeUri: Uri, folderId: String?, baseName: String, format: DbFormat): Boolean =
         listDatabases(ctx, treeUri, folderId ?: DocumentsContract.getTreeDocumentId(treeUri))
-            .any { it.baseName == baseName && it.format == DbFormat.SCID5 }
+            .any { it.baseName == baseName && it.format == format }
 
     /**
      * Konvertiert [src] in die neue Scid-5-Datenbank [baseName] im Ordner [folderId] (siehe [Scid5Database.convert]).
@@ -298,6 +316,18 @@ object SafStorage {
     fun convertToScid5(
         ctx: Context, treeUri: Uri, folderId: String?, baseName: String, src: ChessDatabase, progress: (Int) -> Unit,
     ): List<Int> = Scid5Database.convert(src, SafFileSet(ctx, treeUri, folderId, "", emptyMap()).sibling(baseName), progress)
+
+    /**
+     * Schreibt [src] in das neue Scidb-Archiv [baseName].scv (mit einer Scid-5-Datenbank darin) im Ordner [folderId].
+     * Liefert die Indizes der nicht übernommenen Partien.
+     */
+    fun convertToScidbArchive(
+        ctx: Context, treeUri: Uri, folderId: String?, baseName: String, src: ChessDatabase, progress: (Int) -> Unit,
+    ): List<Int> {
+        val work = archiveDir(ctx).apply { mkdirs() }
+        val target = SafFileSet(ctx, treeUri, folderId, "", emptyMap()).sibling(baseName)
+        return Archives.convertToScidbArchive(src, target, work, progress)
+    }
 
     /** Öffnet eine einzelne PGN-Datei (z.B. aus "Öffnen mit"). */
     fun openPgn(ctx: Context, uri: Uri, name: String, progress: (Float) -> Unit): ChessDatabase =

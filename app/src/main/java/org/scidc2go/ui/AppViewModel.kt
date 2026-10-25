@@ -169,7 +169,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val uri = folderUri ?: return
         runBusy("Öffne ${entry.baseName} …") {
             val newDb = withContext(Dispatchers.IO) {
-                SafStorage.open(ctx, uri, entry, writable = entry.format == DbFormat.SCID5) { p ->
+                SafStorage.open(ctx, uri, entry, writable = entry.format.writable) { p ->
                     busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
                 }
             }
@@ -251,7 +251,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun openEntry(tree: Uri?, entry: DbEntry) {
         val newDb = withContext(Dispatchers.IO) {
-            SafStorage.open(ctx, tree, entry, writable = entry.format == DbFormat.SCID5) { p ->
+            SafStorage.open(ctx, tree, entry, writable = entry.format.writable) { p ->
                 busy = "Lese ${entry.baseName} … ${(p * 100).toInt()} %"
             }
         }
@@ -452,7 +452,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         treeVersion++
     }
 
-    val writableTargets get() = dbEntries.filter { it.format == DbFormat.SCID5 }
+    val writableTargets get() = dbEntries.filter { it.format.writable }
     val canSaveInPlace get() = db?.writable == true
 
     /** Speichert in die geöffnete Scid-5-Datenbank (ersetzen oder anhängen). */
@@ -600,48 +600,60 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Vorgeschlagener Name, wenn eine Rückfrage zum Konvertieren nach Scid 5 offen ist (sonst null). */
-    var convertRequest by mutableStateOf<String?>(null)
+    /** Offene Rückfrage zum Konvertieren: Zielformat (Scid 5 oder Scidb-Archiv) und vorgeschlagener Name. */
+    data class ConvertRequest(val format: DbFormat, val name: String)
+
+    var convertRequest by mutableStateOf<ConvertRequest?>(null)
         private set
 
     /** Ziel der Konvertierung: Ordner der Datenbank, sonst der gewählte Datenbank-Ordner. */
     private fun convertTarget(): Pair<Uri, String?>? =
         dbTree?.let { it to dbEntry?.folderId } ?: folderUri?.let { it to null }
 
-    val canConvert get() = db != null && db !is Scid5Database && convertTarget() != null
+    /** Lässt sich die offene Datenbank in [format] umwandeln (nicht in ihr eigenes Format)? */
+    fun canConvert(format: DbFormat): Boolean {
+        val d = db ?: return false
+        if (convertTarget() == null) return false
+        return when (format) {
+            DbFormat.SCID5 -> d !is Scid5Database
+            else -> dbEntry?.format != format
+        }
+    }
 
-    fun requestConvert() {
+    fun requestConvert(format: DbFormat) {
         val d = db ?: return
         val (tree, folder) = convertTarget() ?: run {
-            message = "Bitte zuerst einen Ordner wählen, in dem die Scid-5-Datenbank entstehen soll"
+            message = "Bitte zuerst einen Ordner wählen, in dem die neue Datenbank entstehen soll"
             return
         }
         runBusy("Prüfe Namen …") {
             val base = d.name.removeSuffix(".pgn")
-            convertRequest = withContext(Dispatchers.IO) {
+            val name = withContext(Dispatchers.IO) {
                 generateSequence(1) { it + 1 }.map { if (it == 1) base else "$base-$it" }
-                    .first { !SafStorage.scid5Exists(ctx, tree, folder, it) }
+                    .first { !SafStorage.exists(ctx, tree, folder, it, format) }
             }
+            convertRequest = ConvertRequest(format, name)
         }
     }
 
     fun cancelConvert() { convertRequest = null }
 
     fun confirmConvert(name: String) {
+        val format = convertRequest?.format ?: return
         convertRequest = null
         val d = db ?: return
         val (tree, folder) = convertTarget() ?: return
-        val clean = name.trim().removeSuffix(".si5")
+        val clean = name.trim().removeSuffix(".${format.mainExt}")
         if (clean.isEmpty()) return
         runBusy("Konvertiere …") {
             val total = d.gameCount
             val failed = withContext(Dispatchers.IO) {
-                if (SafStorage.scid5Exists(ctx, tree, folder, clean)) throw java.io.IOException("$clean existiert bereits")
-                SafStorage.convertToScid5(ctx, tree, folder, clean, d) { n ->
-                    if (n % 50 == 0 || n == total) busy = "Konvertiere nach $clean … $n / $total"
-                }
+                if (SafStorage.exists(ctx, tree, folder, clean, format)) throw java.io.IOException("$clean existiert bereits")
+                val progress = { n: Int -> if (n % 50 == 0 || n == total) busy = "Konvertiere nach $clean … $n / $total" }
+                if (format == DbFormat.SCID5) SafStorage.convertToScid5(ctx, tree, folder, clean, d, progress)
+                else SafStorage.convertToScidbArchive(ctx, tree, folder, clean, d, progress)
             }
-            message = "In Scid 5 konvertiert: $clean (${total - failed.size} Partien)" +
+            message = "In ${format.label} umgewandelt: $clean (${total - failed.size} Partien)" +
                 if (failed.isNotEmpty()) ", ${failed.size} nicht übernommen (Partien ${failed.take(5).joinToString { "${it + 1}" }}" +
                     (if (failed.size > 5) " …" else "") + ")" else ""
             refreshFolder()

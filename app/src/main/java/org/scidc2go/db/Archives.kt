@@ -17,13 +17,17 @@
  */
 package org.scidc2go.db
 
+import org.scidc2go.chess.Game
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
 import java.util.zip.CRC32
 import java.util.zip.CheckedInputStream
+import java.util.zip.CheckedOutputStream
+import java.util.zip.DeflaterOutputStream
 import java.util.zip.GZIPInputStream
 import java.util.zip.InflaterInputStream
 import java.util.zip.ZipInputStream
@@ -106,14 +110,20 @@ object Archives {
         return count
     }
 
-    /** Öffnet die entpackte Datenbank in [dir] (Scidb, Scid 3/4/5 oder PGN), schreibgeschützt. */
-    fun openExtracted(dir: File, name: String, archiveFormat: String, progress: (Float) -> Unit): ChessDatabase {
+    /**
+     * Öffnet die entpackte Datenbank in [dir] (Scidb, Scid 3/4/5 oder PGN). Schreibbar ist nur eine
+     * Scid-5-Datenbank und nur mit [repack]: Nach jeder Änderung wird damit das Archiv neu geschrieben.
+     */
+    fun openExtracted(
+        dir: File, name: String, archiveFormat: String, progress: (Float) -> Unit,
+        repack: ((ChessDatabase) -> Unit)? = null,
+    ): ChessDatabase {
         val files = dir.listFiles()?.map { it.name } ?: emptyList()
         fun find(ext: String) = files.firstOrNull { it.lowercase().endsWith(".$ext") }
         fun base(ext: String) = find(ext)?.dropLast(ext.length + 1)
         fun pgn(f: File) = PgnDatabase(name, java.io.RandomAccessFile(f, "r").channel, progress)
         val inner = base("sci")?.let { ScidbDatabase(JavaFileSet(dir, it)) }
-            ?: base("si5")?.let { Scid5Database.open(JavaFileSet(dir, it), false) }
+            ?: base("si5")?.let { Scid5Database.open(JavaFileSet(dir, it), repack != null) }
             ?: base("si4")?.let { Scid4Database(JavaFileSet(dir, it)) }
             ?: base("si3")?.let { Scid4Database(JavaFileSet(dir, it), v3 = true) }
             ?: find("pgn.gz")?.let { gz ->
@@ -123,8 +133,83 @@ object Archives {
             }
             ?: find("pgn")?.let { pgn(File(dir, it)) }
             ?: throw IOException("Das Archiv enthält keine lesbare Datenbank")
-        return ArchiveDatabase(inner, dir, name, archiveFormat)
+        return ArchiveDatabase(inner, dir, name, archiveFormat, repack.takeIf { inner.writable })
     }
+
+    /**
+     * Schreibt die Dateien [files] als Scidb-Archiv nach [out], wie `archive::packFiles` in Scidb:
+     * jede Datei zlib-komprimiert, [count] ist die Zahl der Partien. Die komprimierten Daten entstehen
+     * zuerst in einer Datei im Verzeichnis [work], weil ihre Größe vor ihnen im Archiv steht.
+     */
+    fun writeScidbArchive(files: List<File>, count: Int, out: OutputStream, work: File) {
+        fun puts(s: String) = out.write(s.toByteArray())
+        val formats = files.map { it.name.substringAfterLast('.', "").lowercase() }
+            .filter { it in INDEX_EXTS }.distinct().ifEmpty { listOf("si5") }
+        puts("iveArch\n<TotalSize> ${files.sumOf { it.length() }}\n<Count> $count\n")
+        puts("<Format> ${formats.joinToString(",")}\n<Type> single")
+        val packed = File.createTempFile("pack", ".z", work)
+        try {
+            for (f in files) {
+                val crc = CRC32()
+                f.inputStream().use { inp ->
+                    DeflaterOutputStream(CheckedOutputStream(packed.outputStream().buffered(), crc)).use { inp.copyTo(it) }
+                }
+                puts("\n<-- H E A D -->\n<FileName> ${f.name}\n<FileSize> ${f.length()}\n<Compression> zlib\n")
+                puts("<Modified> ${f.lastModified() / 1000}\n<Size> ${packed.length()}\n<Checksum> ${crc.value}\n")
+                puts("<-- D A T A -->\n")
+                packed.inputStream().use { it.copyTo(out) }
+            }
+        } finally {
+            packed.delete()
+        }
+    }
+
+    /**
+     * Schreibt das Scidb-Archiv [target] (Endung `scv`) mit den Dateien [files]; ein vorhandenes Archiv wird
+     * ersetzt. Wie beim Komprimieren entsteht zuerst „name.neu“, erst danach wird das alte Archiv
+     * zu „name.alt“ umbenannt und gelöscht. Liefert die Dateien des neuen Archivs.
+     */
+    fun writeScidbArchiveFile(target: DbFileSet, files: List<File>, count: Int, work: File): DbFileSet {
+        val base = target.baseName
+        val tmp = target.sibling("$base.neu")
+        tmp.delete(SCV)
+        tmp.openWrite("scv").use { ch ->
+            ch.truncate(0)
+            val out = java.nio.channels.Channels.newOutputStream(ch).buffered(1 shl 16)
+            writeScidbArchive(files, count, out, work)
+            out.flush()
+            ch.force(true)
+        }
+        if (target.exists("scv")) {
+            target.sibling("$base.alt").delete(SCV)
+            target.rename("$base.alt", SCV)
+            tmp.rename(base, SCV)
+            target.delete(SCV)
+        } else {
+            tmp.rename(base, SCV)
+        }
+        return tmp
+    }
+
+    /**
+     * Schreibt alle Partien aus [src] in das neue Scidb-Archiv [target] mit einer Scid-5-Datenbank darin
+     * (siehe [Scid5Database.convert]). Liefert die Indizes der nicht übernommenen Partien.
+     */
+    fun convertToScidbArchive(src: ChessDatabase, target: DbFileSet, work: File, progress: (Int) -> Unit = {}): List<Int> {
+        if (target.exists("scv")) throw IOException("${target.baseName}.scv existiert bereits")
+        val dir = java.nio.file.Files.createTempDirectory(work.toPath(), "neu").toFile()
+        try {
+            val failed = Scid5Database.convert(src, JavaFileSet(dir, target.baseName), progress)
+            val files = Scid5Database.EXTS.map { File(dir, "${target.baseName}.$it") }
+            writeScidbArchiveFile(target, files, src.gameCount - failed.size, work)
+            return failed
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    val SCV = listOf("scv")
+    private val INDEX_EXTS = setOf("sci", "si3", "si4", "si5", "pgn")
 
     private const val HEAD = "<-- H E A D -->"
     private const val DATA = "<-- D A T A -->"
@@ -173,15 +258,26 @@ class CountingInputStream(inp: InputStream, private val onRead: (Long) -> Unit) 
         super.read(b, off, len).also { if (it > 0) { count += it; onRead(count) } }
 }
 
-/** Eine aus einem Archiv entpackte Datenbank; beim Schließen wird das Arbeitsverzeichnis gelöscht. */
+/**
+ * Eine aus einem Archiv entpackte Datenbank; beim Schließen wird das Arbeitsverzeichnis gelöscht.
+ * Mit [repack] ist sie schreibbar: Nach jeder Änderung wird das Archiv damit neu geschrieben.
+ */
 class ArchiveDatabase(
     private val inner: ChessDatabase,
     private val dir: File,
     override val name: String,
     archiveFormat: String,
+    private val repack: ((ChessDatabase) -> Unit)? = null,
 ) : ChessDatabase by inner {
     override val formatName = "${inner.formatName}, $archiveFormat"
-    override val writable get() = false
+    override val writable get() = repack != null
+
+    private fun <T> changed(op: () -> T): T = op().also { repack?.invoke(inner) }
+
+    override fun addGame(game: Game) = changed { inner.addGame(game) }
+    override fun replaceGame(index: Int, game: Game) = changed { inner.replaceGame(index, game) }
+    override fun setDeleted(index: Int, deleted: Boolean) = changed { inner.setDeleted(index, deleted) }
+    override fun deleteGames(indices: Collection<Int>) = changed { inner.deleteGames(indices) }
 
     override fun close() {
         try {

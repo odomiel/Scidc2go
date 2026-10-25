@@ -2,11 +2,13 @@ package org.scidc2go
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.scidc2go.chess.Pgn
 import org.scidc2go.db.Archives
 import org.scidc2go.db.ChessDatabase
+import org.scidc2go.db.DbFileSet
 import org.scidc2go.db.JavaFileSet
 import org.scidc2go.db.PgnDatabase
 import org.scidc2go.db.Scid4Database
@@ -75,6 +77,67 @@ class ArchiveTest {
     fun scidbArchiveChecksum() {
         val files = listOf(File(resDir, "s4.si4") to "zlib")
         Archives.extractScidbArchive(scidbArchive(files, corrupt = true).inputStream(), createTempDirectory().toFile())
+    }
+
+    @Test fun convertToScidbArchive() {
+        val dir = createTempDirectory().toFile()
+        val work = createTempDirectory().toFile()
+        val expected = Scid4Database(JavaFileSet(resDir, "s4")).use { src ->
+            assertEquals(emptyList<Int>(), Archives.convertToScidbArchive(src, JavaFileSet(dir, "arch"), work))
+            pgns(src)
+        }
+        assertEquals(listOf("arch.scv"), dir.list()!!.toList())
+        val text = File(dir, "arch.scv").readBytes().toString(Charsets.ISO_8859_1)
+        assertTrue(text.startsWith("iveArch\n<TotalSize> "))
+        assertTrue("<Count> 3\n<Format> si5\n<Type> single\n<-- H E A D -->\n<FileName> arch.si5\n" in text)
+        // Zielname schon vorhanden
+        assertThrows(IOException::class.java) {
+            Scid4Database(JavaFileSet(resDir, "s4")).use { Archives.convertToScidbArchive(it, JavaFileSet(dir, "arch"), work) }
+        }
+
+        val out = createTempDirectory().toFile()
+        assertEquals(listOf("arch.sg5", "arch.si5", "arch.sn5"),
+            Archives.extractScidbArchive(File(dir, "arch.scv").inputStream(), out).sorted())
+        Archives.openExtracted(out, "arch", "Scidb-Archiv", {}).use { assertEquals(expected, pgns(it)) }
+        assertEquals(emptyList<String>(), work.list()!!.toList())
+    }
+
+    @Test fun editScidbArchive() {
+        val dir = createTempDirectory().toFile()
+        val work = createTempDirectory().toFile()
+        Scid4Database(JavaFileSet(resDir, "s4")).use { Archives.convertToScidbArchive(it, JavaFileSet(dir, "ed"), work) }
+        val extra = PgnDatabase("a", RandomAccessFile(File(resDir, "sample.pgn"), "r").channel).use { it.loadGame(1) }
+
+        fun open(): ChessDatabase {
+            val out = java.nio.file.Files.createTempDirectory(work.toPath(), "db").toFile()
+            Archives.extractScidbArchive(File(dir, "ed.scv").inputStream(), out)
+            var target: DbFileSet = JavaFileSet(dir, "ed")
+            return Archives.openExtracted(out, "ed", "Scidb-Archiv", {}, { db ->
+                target = Archives.writeScidbArchiveFile(target, out.listFiles()!!.sortedBy { it.name }, db.gameCount, work)
+            })
+        }
+
+        val before = open().use { db ->
+            assertTrue(db.writable)
+            val list = pgns(db)
+            assertEquals(3, db.addGame(extra))
+            db.setDeleted(0, true)
+            db.replaceGame(1, extra)
+            list
+        }
+        assertEquals(listOf("ed.scv"), dir.list()!!.toList())
+        open().use { db ->
+            assertEquals(4, db.gameCount)
+            assertTrue(db.header(0).deleted)
+            val now = pgns(db)
+            assertEquals(before[0], now[0])
+            assertEquals(Pgn.write(extra), now[1])
+            assertEquals(before[2], now[2])
+            assertEquals(Pgn.write(extra), now[3])
+            db.deleteGames(listOf(0))
+        }
+        open().use { assertEquals(3, it.gameCount) }
+        assertEquals(listOf("ed.scv"), dir.list()!!.toList())
     }
 
     @Test fun readPgnGzip() {
