@@ -10,6 +10,7 @@ import org.scidc2go.db.ChessDatabase
 import org.scidc2go.db.JavaFileSet
 import org.scidc2go.db.PgnDatabase
 import org.scidc2go.db.Scid4Database
+import org.scidc2go.db.Scid5Database
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
@@ -110,5 +111,65 @@ class ArchiveTest {
         assertEquals(2, Archives.extractZipPgn(zip.inputStream(), File(dir, "z.pgn")))
         val single = PgnDatabase("a", RandomAccessFile(File(resDir, "sample.pgn"), "r").channel).use { pgns(it) }
         Archives.openExtracted(dir, "z", "PGN zip", {}).use { assertEquals(single + single, pgns(it)) }
+    }
+
+    /** Packt Dateien wie die App (`name.si5` usw.); mit SCIDC2GO_OUT=<dir> bleibt das Archiv zum Prüfen mit 7-Zip dort liegen. */
+    private fun pack7z(base: String, exts: List<String>, newBase: String): File {
+        val out = System.getenv("SCIDC2GO_OUT")?.let { File(it).apply { mkdirs() } } ?: createTempDirectory().toFile()
+        val archive = File(out, "$newBase.${exts.first()}.7z")
+        Archives.write7z(archive, exts.map { ext -> "$newBase.$ext" to { File(resDir, "$base.$ext").inputStream() } })
+        return archive
+    }
+
+    @Test fun sevenZipRoundtrip() {
+        val cases = listOf(
+            Triple("s5", listOf("si5", "sg5", "sn5")) { Scid5Database.open(JavaFileSet(resDir, "s5"), writable = false) },
+            Triple("s4", listOf("si4", "sg4", "sn4")) { Scid4Database(JavaFileSet(resDir, "s4")) },
+            Triple("sample", listOf("pgn")) { PgnDatabase("a", RandomAccessFile(File(resDir, "sample.pgn"), "r").channel) },
+        )
+        for ((base, exts, original) in cases) {
+            val archive = pack7z(base, exts, "neu")
+            val dir = createTempDirectory().toFile()
+            assertEquals(exts.map { "neu.$it" }, Archives.extract7z(archive, dir))
+            for (ext in exts) assertTrue(File(resDir, "$base.$ext").readBytes().contentEquals(File(dir, "neu.$ext").readBytes()))
+            val expected = original().use { pgns(it) }
+            val db = Archives.open7zExtracted(dir, "neu", exts, {})
+            assertFalse(db.writable)
+            assertTrue(db.formatName.endsWith(", 7z"))
+            assertEquals(expected, pgns(db))
+            db.close()
+            assertFalse("Arbeitsverzeichnis wird beim Schließen gelöscht", dir.exists())
+        }
+    }
+
+    @Test fun sevenZipFrom7Zip() {
+        // Mit 7-Zip 23.01 erzeugt: "7zz a s5.si5.7z s5.si5 s5.sg5 s5.sn5" (solid, LZMA2) und
+        // "7zz a -mx=9 sample.pgn.7z partien" (PGN in einem Unterordner)
+        val s5 = Scid5Database.open(JavaFileSet(resDir, "s5"), writable = false).use { pgns(it) }
+        val dir = createTempDirectory().toFile()
+        Archives.extract7z(File(resDir, "s5.si5.7z"), dir)
+        Archives.open7zExtracted(dir, "s5", listOf("si5", "sg5", "sn5"), {}).use { assertEquals(s5, pgns(it)) }
+
+        val pgn = PgnDatabase("a", RandomAccessFile(File(resDir, "sample.pgn"), "r").channel).use { pgns(it) }
+        val dir2 = createTempDirectory().toFile()
+        assertEquals(listOf("sample.pgn"), Archives.extract7z(File(resDir, "sample.pgn.7z"), dir2))
+        Archives.open7zExtracted(dir2, "sample", listOf("pgn"), {}).use { assertEquals(pgn, pgns(it)) }
+    }
+
+    @Test(expected = IOException::class)
+    fun sevenZipMissingFile() {
+        val dir = createTempDirectory().toFile()
+        val archive = File(createTempDirectory().toFile(), "x.si5.7z")
+        Archives.write7z(archive, listOf("x.si5" to { File(resDir, "s5.si5").inputStream() }))
+        Archives.extract7z(archive, dir)
+        Archives.open7zExtracted(dir, "x", listOf("si5", "sg5", "sn5"), {})
+    }
+
+    @Test(expected = LocalizedIOException::class)
+    fun sevenZipCorrupt() {
+        val bytes = File(resDir, "s5.si5.7z").readBytes()
+        val broken = File(createTempDirectory().toFile(), "x.si5.7z")
+        broken.writeBytes(bytes.copyOf(bytes.size - 40))
+        Archives.extract7z(broken, createTempDirectory().toFile())
     }
 }

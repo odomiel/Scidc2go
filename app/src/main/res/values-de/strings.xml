@@ -63,12 +63,14 @@
     <string name="delete_marked">Markierte Partien löschen</string>
     <string name="compact_db">Datenbank komprimieren</string>
     <string name="convert_scid5">In Scid 5 konvertieren</string>
+    <string name="pack_7z">Als 7z-Archiv packen</string>
     <string name="search_hint">Spieler, Turnier, Jahr, ECO …</string>
     <string name="moves_short">%d Z.</string>
     <string name="mark_delete">Zum Löschen markieren</string>
     <string name="unmark_delete">Löschmarkierung entfernen</string>
     <string name="delete_game">Partie löschen</string>
     <string name="new_db_name">Name der neuen Datenbank</string>
+    <string name="archive_name">Name des Archivs</string>
     <string name="compact_title">%1$s komprimieren?</string>
     <plurals name="compact_marked">
         <item quantity="one">%d zum Löschen markierte Partie wird endgültig entfernt.</item>
@@ -148,6 +150,7 @@
     <string name="busy_check_name">Prüfe Namen …</string>
     <string name="busy_converting">Konvertiere …</string>
     <string name="busy_converting_to">Konvertiere nach %1$s … %2$d / %3$d</string>
+    <string name="busy_packing">Packe %1$s … %2$d %%</string>
     <string name="busy_starting">Starte %s …</string>
     <string name="busy_net">Lade Stockfish-Netz …</string>
     <string name="busy_net_progress">Lade Stockfish-Netz … %d %%</string>
@@ -169,6 +172,7 @@
         <item quantity="other">In Scid 5 konvertiert: %1$s (%2$d Partien)</item>
     </plurals>
     <string name="converted_failed">, %1$d nicht übernommen (Partien %2$s)</string>
+    <string name="packed">%1$s gepackt: %2$s → %3$s</string>
     <string name="engine_exited">%s wurde unerwartet beendet</string>
 
     <!-- Fehler der Oberfläche -->
@@ -241,6 +245,10 @@
     <string name="err_checksum_file">%s: Prüfsumme falsch</string>
     <string name="err_archive_no_db">Das Archiv enthält keine lesbare Datenbank</string>
     <string name="err_zip_no_pgn">%s enthält keine PGN-Datei</string>
+    <string name="err_7z">Fehler im 7z-Archiv: %s</string>
+    <string name="err_7z_encrypted">Das 7z-Archiv ist verschlüsselt; verschlüsselte Archive werden nicht unterstützt</string>
+    <string name="err_7z_memory">Nicht genug Speicher für das 7z-Archiv</string>
+    <string name="err_7z_no_db">Das 7z-Archiv enthält keine .%s-Datei</string>
 
     <!-- Fehler der Engines -->
     <string name="err_net_download">Stockfish-Netz konnte nicht geladen werden: %s</string>

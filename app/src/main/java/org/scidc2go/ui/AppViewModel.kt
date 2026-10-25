@@ -632,7 +632,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val base = d.name.removeSuffix(".pgn")
             convertRequest = withContext(Dispatchers.IO) {
                 generateSequence(1) { it + 1 }.map { if (it == 1) base else "$base-$it" }
-                    .first { !SafStorage.scid5Exists(ctx, tree, folder, it) }
+                    .first { !SafStorage.dbExists(ctx, tree, folder, it, DbFormat.SCID5) }
             }
         }
     }
@@ -648,7 +648,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         runBusy(str(R.string.busy_converting)) {
             val total = d.gameCount
             val failed = withContext(Dispatchers.IO) {
-                if (SafStorage.scid5Exists(ctx, tree, folder, clean)) throw LocalizedIOException(R.string.err_exists, clean)
+                if (SafStorage.dbExists(ctx, tree, folder, clean, DbFormat.SCID5)) throw LocalizedIOException(R.string.err_exists, clean)
                 SafStorage.convertToScid5(ctx, tree, folder, clean, d) { n ->
                     if (n % 50 == 0 || n == total) busy = str(R.string.busy_converting_to, clean, n, total)
                 }
@@ -659,6 +659,47 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     str(R.string.converted_failed, failed.size,
                         failed.take(5).joinToString { "${it + 1}" } + if (failed.size > 5) " …" else "")
                 } else ""
+            refreshFolder()
+        }
+    }
+
+    /** Vorgeschlagener Name, wenn eine Rückfrage zum Packen als 7z-Archiv offen ist (sonst null). */
+    var packRequest by mutableStateOf<String?>(null)
+        private set
+
+    /** Packen geht bei Datenbanken aus einem freigegebenen Ordner, die selbst kein Archiv sind. */
+    val canPack get() = db != null && dbEntry?.format?.packed != null && dbTree != null
+
+    fun requestPack() {
+        val entry = dbEntry ?: return
+        val tree = dbTree ?: return
+        val packed = entry.format.packed ?: return
+        runBusy(str(R.string.busy_check_name)) {
+            packRequest = withContext(Dispatchers.IO) {
+                generateSequence(1) { it + 1 }.map { if (it == 1) entry.baseName else "${entry.baseName}-$it" }
+                    .first { !SafStorage.dbExists(ctx, tree, entry.folderId, it, packed) }
+            }
+        }
+    }
+
+    fun cancelPack() { packRequest = null }
+
+    fun confirmPack(name: String) {
+        packRequest = null
+        val entry = dbEntry ?: return
+        val tree = dbTree ?: return
+        val packed = entry.format.packed ?: return
+        val clean = name.trim().removeSuffix(".7z").removeSuffix(".${entry.format.mainExt}")
+        if (clean.isEmpty()) return
+        val file = "$clean.${packed.mainExt}"
+        runBusy(str(R.string.busy_packing, file, 0)) {
+            val size = withContext(Dispatchers.IO) {
+                if (SafStorage.dbExists(ctx, tree, entry.folderId, clean, packed)) throw LocalizedIOException(R.string.err_exists, file)
+                SafStorage.pack7z(ctx, tree, entry.folderId, entry, clean) { p ->
+                    busy = str(R.string.busy_packing, file, (p * 100).toInt())
+                }
+            }
+            message = str(R.string.packed, file, formatBytes(entry.size), formatBytes(size))
             refreshFolder()
         }
     }

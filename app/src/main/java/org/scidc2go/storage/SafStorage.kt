@@ -38,8 +38,11 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.channels.FileChannel
 
-/** Datenbankformat; [label] ist der Anzeigename als String-Ressource. */
-enum class DbFormat(@StringRes val label: Int, val mainExt: String, val exts: List<String>) {
+/**
+ * Datenbankformat; [label] ist der Anzeigename als String-Ressource. Bei 7z-Archiven ist [inner] das Format
+ * der enthaltenen Datenbank, die Endung nennt es (`name.si5.7z`).
+ */
+enum class DbFormat(@StringRes val label: Int, val mainExt: String, val exts: List<String>, val inner: DbFormat? = null) {
     SCID5(R.string.fmt_scid5, "si5", listOf("si5", "sg5", "sn5")),
     SCID4(R.string.fmt_scid4, "si4", listOf("si4", "sg4", "sn4")),
     SCID3(R.string.fmt_scid3, "si3", listOf("si3", "sg3", "sn3")),
@@ -48,6 +51,15 @@ enum class DbFormat(@StringRes val label: Int, val mainExt: String, val exts: Li
     SCIDB_ARCHIVE(R.string.fmt_scidb_archive, "scv", listOf("scv")),
     PGN_GZ(R.string.fmt_pgn_gz, "pgn.gz", listOf("pgn.gz")),
     PGN_ZIP(R.string.fmt_pgn_zip, "zip", listOf("zip")),
+    SCID5_7Z(R.string.fmt_scid5_7z, "si5.7z", listOf("si5.7z"), SCID5),
+    SCID4_7Z(R.string.fmt_scid4_7z, "si4.7z", listOf("si4.7z"), SCID4),
+    SCID3_7Z(R.string.fmt_scid3_7z, "si3.7z", listOf("si3.7z"), SCID3),
+    SCIDB_7Z(R.string.fmt_scidb_7z, "sci.7z", listOf("sci.7z"), SCIDB),
+    PGN_7Z(R.string.fmt_pgn_7z, "pgn.7z", listOf("pgn.7z"), PGN),
+    ;
+
+    /** Das 7z-Format, in das sich dieses Format packen lässt (null bei Archiven). */
+    val packed get() = entries.firstOrNull { it.inner == this }
 }
 
 /**
@@ -238,7 +250,9 @@ object SafStorage {
             DbFormat.SCID3 -> Scid4Database(fs, v3 = true)
             DbFormat.SCIDB -> ScidbDatabase(fs)
             DbFormat.PGN -> PgnDatabase(entry.baseName, fs.openRead("pgn"), progress)
-            DbFormat.SCIDB_ARCHIVE, DbFormat.PGN_GZ, DbFormat.PGN_ZIP -> openArchive(ctx, entry, progress)
+            DbFormat.SCIDB_ARCHIVE, DbFormat.PGN_GZ, DbFormat.PGN_ZIP,
+            DbFormat.SCID5_7Z, DbFormat.SCID4_7Z, DbFormat.SCID3_7Z, DbFormat.SCIDB_7Z, DbFormat.PGN_7Z,
+            -> openArchive(ctx, entry, progress)
         }
     }
 
@@ -259,6 +273,19 @@ object SafStorage {
         try {
             val total = entry.size.coerceAtLeast(1)
             val raw = ctx.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("${entry.baseName}.$ext")
+            entry.format.inner?.let { inner ->
+                // 7z braucht wahlfreien Zugriff; SAF liefert nicht immer eine durchsuchbare Datei
+                val tmp = File.createTempFile("archiv", ".7z", parent)
+                try {
+                    CountingInputStream(raw) { progress((it.toFloat() / total / 2).coerceAtMost(0.5f)) }.use { inp ->
+                        tmp.outputStream().use { inp.copyTo(it, 1 shl 16) }
+                    }
+                    Archives.extract7z(tmp, dir) { progress(0.5f + it / 2) }
+                } finally {
+                    tmp.delete()
+                }
+                return Archives.open7zExtracted(dir, entry.baseName, inner.exts, progress)
+            }
             CountingInputStream(raw.buffered(1 shl 16)) { progress((it.toFloat() / total).coerceAtMost(1f)) }.use { inp ->
                 when (entry.format) {
                     DbFormat.SCIDB_ARCHIVE -> Archives.extractScidbArchive(inp, dir)
@@ -290,10 +317,49 @@ object SafStorage {
         return removed to fresh
     }
 
-    /** Gibt es im Ordner [folderId] (null = oberster Ordner) schon Dateien der Scid-5-Datenbank [baseName]? */
-    fun scid5Exists(ctx: Context, treeUri: Uri, folderId: String?, baseName: String): Boolean =
+    /** Gibt es im Ordner [folderId] (null = oberster Ordner) schon Dateien der Datenbank [baseName] im Format [format]? */
+    fun dbExists(ctx: Context, treeUri: Uri, folderId: String?, baseName: String, format: DbFormat): Boolean =
         listDatabases(ctx, treeUri, folderId ?: DocumentsContract.getTreeDocumentId(treeUri))
-            .any { it.baseName == baseName && it.format == DbFormat.SCID5 }
+            .any { it.baseName == baseName && it.format == format }
+
+    /**
+     * Packt die Dateien der Datenbank [entry] unverändert in das 7z-Archiv `[baseName].si5.7z` (bzw. `.si4.7z` …)
+     * im Ordner [folderId]; im Archiv heißen sie `[baseName].si5` usw. Liefert die Größe des Archivs.
+     */
+    fun pack7z(
+        ctx: Context, treeUri: Uri, folderId: String?, entry: DbEntry, baseName: String, progress: (Float) -> Unit,
+    ): Long {
+        val packed = entry.format.packed ?: throw IllegalArgumentException(entry.format.name)
+        val name = "$baseName.${packed.mainExt}"
+        // Erst im Cache packen, damit im Ordner kein halbes Archiv liegen bleibt
+        val tmp = File.createTempFile("pack", ".7z", archiveDir(ctx).apply { mkdirs() })
+        try {
+            val total = entry.size.coerceAtLeast(1)
+            Archives.write7z(tmp, entry.format.exts.map { ext ->
+                "$baseName.$ext" to {
+                    val uri = entry.files[ext] ?: throw FileNotFoundException("${entry.baseName}.$ext")
+                    ctx.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("${entry.baseName}.$ext")
+                }
+            }) { progress((it.toFloat() / total).coerceAtMost(1f)) }
+            val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, folderId ?: DocumentsContract.getTreeDocumentId(treeUri))
+            val uri = DocumentsContract.createDocument(ctx.contentResolver, parent, "application/x-7z-compressed", name)
+                ?: throw LocalizedIOException(R.string.err_cannot_create, name)
+            try {
+                val out = ctx.contentResolver.openOutputStream(uri) ?: throw LocalizedIOException(R.string.err_cannot_create, name)
+                out.use { o -> tmp.inputStream().use { it.copyTo(o, 1 shl 16) } }
+            } catch (e: Throwable) {
+                try {
+                    DocumentsContract.deleteDocument(ctx.contentResolver, uri)
+                } catch (_: Exception) {
+                    // bleibt als unvollständige Datei liegen
+                }
+                throw e
+            }
+            return tmp.length()
+        } finally {
+            tmp.delete()
+        }
+    }
 
     /**
      * Konvertiert [src] in die neue Scid-5-Datenbank [baseName] im Ordner [folderId] (siehe [Scid5Database.convert]).

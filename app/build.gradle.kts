@@ -77,6 +77,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    // 7z-Archive: Container aus Commons Compress, LZMA/LZMA2 aus XZ for Java
+    implementation("org.apache.commons:commons-compress:1.28.0")
+    implementation("org.tukaani:xz:1.12")
 
     testImplementation("junit:junit:4.13.2")
 }

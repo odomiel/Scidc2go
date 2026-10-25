@@ -17,13 +17,23 @@
  */
 package org.scidc2go.db
 
+import org.apache.commons.compress.PasswordRequiredException
+import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry
+import org.apache.commons.compress.archivers.sevenz.SevenZFile
+import org.apache.commons.compress.archivers.sevenz.SevenZMethod
+import org.apache.commons.compress.archivers.sevenz.SevenZMethodConfiguration
+import org.apache.commons.compress.archivers.sevenz.SevenZOutputFile
 import org.scidc2go.LocalizedIOException
 import org.scidc2go.R
+import org.scidc2go.Text
+import org.tukaani.xz.LZMA2Options
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.RandomAccessFile
+import java.util.Date
 import java.util.zip.CRC32
 import java.util.zip.CheckedInputStream
 import java.util.zip.GZIPInputStream
@@ -32,8 +42,8 @@ import java.util.zip.ZipInputStream
 
 /**
  * Gepackte Datenbanken, wie Scidb sie kennt: Scidb-Archive (`.scv`), gzip-PGN (`.pgn.gz`) und
- * ZIP-Archive mit PGN-Dateien (`.zip`). Sie werden in ein Arbeitsverzeichnis entpackt und von dort
- * schreibgeschützt geöffnet.
+ * ZIP-Archive mit PGN-Dateien (`.zip`), außerdem 7z-Archive mit einer Datenbank (`name.si5.7z` usw.).
+ * Sie werden in ein Arbeitsverzeichnis entpackt und von dort schreibgeschützt geöffnet.
  */
 object Archives {
 
@@ -125,6 +135,104 @@ object Archives {
             ?: find("pgn")?.let { pgn(File(dir, it)) }
             ?: throw LocalizedIOException(R.string.err_archive_no_db)
         return ArchiveDatabase(inner, dir, name, archiveFormat)
+    }
+
+    /**
+     * Entpackt alle Dateien des 7z-Archivs [archive] nach [dir]. Ordner im Archiv werden ignoriert, nur der
+     * Dateiname zählt (bei gleichen Namen gilt die erste Datei). [progress] erhält den Anteil von 0 bis 1.
+     */
+    fun extract7z(archive: File, dir: File, progress: (Float) -> Unit = {}): List<String> = sevenZ {
+        val names = ArrayList<String>()
+        SevenZFile.builder().setFile(archive).get().use { z ->
+            val total = z.entries.filter { !it.isDirectory && it.hasStream() }.sumOf { it.size }.coerceAtLeast(1)
+            var done = 0L
+            val buf = ByteArray(1 shl 16)
+            while (true) {
+                val e = z.nextEntry ?: break
+                if (e.isDirectory || !e.hasStream() || e.isAntiItem) continue
+                val name = File((e.name ?: continue).replace('\\', '/')).name
+                if (name.isEmpty() || name == "." || name == ".." || name in names) continue
+                File(dir, name).outputStream().use { out ->
+                    while (true) {
+                        val n = z.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        done += n
+                        progress((done.toFloat() / total).coerceAtMost(1f))
+                    }
+                }
+                names.add(name)
+            }
+        }
+        names
+    }
+
+    /**
+     * Schreibt [files] (Name im Archiv → Quelle) als 7z-Archiv nach [out], LZMA2 wie bei 7-Zip.
+     * Voreinstellung 4 (4 MB Wörterbuch) braucht beim Packen etwa 50 MB Speicher statt 100 MB bei Stufe 6.
+     * [progress] erhält die Zahl der bisher gelesenen Bytes.
+     */
+    fun write7z(out: File, files: List<Pair<String, () -> InputStream>>, progress: (Long) -> Unit = {}) = sevenZ {
+        val now = Date()
+        var done = 0L
+        val buf = ByteArray(1 shl 16)
+        SevenZOutputFile(out).use { z ->
+            z.setContentMethods(listOf(SevenZMethodConfiguration(SevenZMethod.LZMA2, LZMA2Options(4))))
+            for ((name, open) in files) {
+                z.putArchiveEntry(SevenZArchiveEntry().apply {
+                    this.name = name
+                    lastModifiedDate = now
+                })
+                open().use { inp ->
+                    while (true) {
+                        val n = inp.read(buf)
+                        if (n < 0) break
+                        z.write(buf, 0, n)
+                        done += n
+                        progress(done)
+                    }
+                }
+                z.closeArchiveEntry()
+            }
+        }
+    }
+
+    /** Fehler von Commons Compress in übersetzbare Meldungen fassen. */
+    private fun <T> sevenZ(block: () -> T): T = try {
+        block()
+    } catch (e: LocalizedIOException) {
+        throw e
+    } catch (e: PasswordRequiredException) {
+        throw LocalizedIOException(Text(R.string.err_7z_encrypted), e)
+    } catch (e: OutOfMemoryError) {
+        throw LocalizedIOException(Text(R.string.err_7z_memory), e)
+    } catch (e: IOException) {
+        throw LocalizedIOException(Text(R.string.err_7z, e.message ?: e.javaClass.simpleName), e)
+    } catch (e: RuntimeException) {
+        // beschädigte Archive führen in Commons Compress teils zu Laufzeitfehlern
+        throw LocalizedIOException(Text(R.string.err_7z, e.message ?: e.javaClass.simpleName), e)
+    }
+
+    /**
+     * Öffnet die aus einem 7z-Archiv entpackte Datenbank in [dir] schreibgeschützt. [exts] sind die Endungen
+     * ihrer Dateien (die erste ist die Hauptdatei: si5, si4, si3, sci oder pgn), wie die Endung des Archivs sie angibt.
+     */
+    fun open7zExtracted(dir: File, name: String, exts: List<String>, progress: (Float) -> Unit): ChessDatabase {
+        val main = exts.first()
+        val files = dir.listFiles()?.map { it.name } ?: emptyList()
+        val base = files.firstOrNull { it.lowercase().endsWith(".$main") }?.dropLast(main.length + 1)
+            ?: throw LocalizedIOException(R.string.err_7z_no_db, main)
+        val missing = exts.filter { "$base.$it" !in files }
+        if (missing.isNotEmpty()) throw LocalizedIOException(R.string.err_missing_files, missing.joinToString(", ") { "$base.$it" })
+        val fs = JavaFileSet(dir, base)
+        val inner = when (main) {
+            "si5" -> Scid5Database.open(fs, writable = false)
+            "si4" -> Scid4Database(fs)
+            "si3" -> Scid4Database(fs, v3 = true)
+            "sci" -> ScidbDatabase(fs)
+            else -> PgnDatabase(name, RandomAccessFile(File(dir, "$base.$main"), "r").channel, progress)
+        }
+        return ArchiveDatabase(inner, dir, name, "7z")
     }
 
     private const val HEAD = "<-- H E A D -->"

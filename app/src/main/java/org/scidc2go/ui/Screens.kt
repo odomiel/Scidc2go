@@ -401,6 +401,8 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                             onClick = { listMenu = false; vm.requestCompact() })
                         DropdownMenuItem({ Text(stringResource(R.string.convert_scid5)) }, enabled = vm.canConvert,
                             onClick = { listMenu = false; vm.requestConvert() })
+                        DropdownMenuItem({ Text(stringResource(R.string.pack_7z)) }, enabled = vm.canPack,
+                            onClick = { listMenu = false; vm.requestPack() })
                     }
                 },
             )
@@ -480,6 +482,10 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
     vm.convertRequest?.let { suggested ->
         NameDialog(stringResource(R.string.convert_scid5), stringResource(R.string.new_db_name), suggested,
             onDismiss = { vm.cancelConvert() }) { vm.confirmConvert(it) }
+    }
+    vm.packRequest?.let { suggested ->
+        NameDialog(stringResource(R.string.pack_7z), stringResource(R.string.archive_name), suggested,
+            onDismiss = { vm.cancelPack() }) { vm.confirmPack(it) }
     }
     vm.compactRequest?.let { marked ->
         AlertDialog(

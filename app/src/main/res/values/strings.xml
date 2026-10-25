@@ -25,6 +25,11 @@
     <string name="fmt_scidb_archive">Scidb archive</string>
     <string name="fmt_pgn_gz" translatable="false">PGN gzip</string>
     <string name="fmt_pgn_zip" translatable="false">PGN zip</string>
+    <string name="fmt_scid5_7z" translatable="false">Scid 5 7z</string>
+    <string name="fmt_scid4_7z" translatable="false">Scid 4 7z</string>
+    <string name="fmt_scid3_7z" translatable="false">Scid 3 7z</string>
+    <string name="fmt_scidb_7z" translatable="false">Scidb 7z</string>
+    <string name="fmt_pgn_7z" translatable="false">PGN 7z</string>
 
     <!-- Stockfish-Netz -->
     <string name="net_title">Download Stockfish network</string>
@@ -73,12 +78,14 @@
     <string name="delete_marked">Delete marked games</string>
     <string name="compact_db">Compact database</string>
     <string name="convert_scid5">Convert to Scid 5</string>
+    <string name="pack_7z">Pack as 7z archive</string>
     <string name="search_hint">Player, event, year, ECO …</string>
     <string name="moves_short">%d mv</string>
     <string name="mark_delete">Mark for deletion</string>
     <string name="unmark_delete">Remove deletion mark</string>
     <string name="delete_game">Delete game</string>
     <string name="new_db_name">Name of the new database</string>
+    <string name="archive_name">Name of the archive</string>
     <string name="compact_title">Compact %1$s?</string>
     <plurals name="compact_marked">
         <item quantity="one">%d game marked for deletion will be removed permanently.</item>
@@ -159,6 +166,7 @@
     <string name="busy_check_name">Checking name …</string>
     <string name="busy_converting">Converting …</string>
     <string name="busy_converting_to">Converting to %1$s … %2$d / %3$d</string>
+    <string name="busy_packing">Packing %1$s … %2$d %%</string>
     <string name="busy_starting">Starting %s …</string>
     <string name="busy_net">Downloading Stockfish network …</string>
     <string name="busy_net_progress">Downloading Stockfish network … %d %%</string>
@@ -180,6 +188,7 @@
         <item quantity="other">Converted to Scid 5: %1$s (%2$d games)</item>
     </plurals>
     <string name="converted_failed">, %1$d not transferred (games %2$s)</string>
+    <string name="packed">%1$s packed: %2$s → %3$s</string>
     <string name="engine_exited">%s terminated unexpectedly</string>
 
     <!-- Fehler der Oberfläche -->
@@ -253,6 +262,10 @@
     <string name="err_checksum_file">%s: checksum mismatch</string>
     <string name="err_archive_no_db">The archive contains no readable database</string>
     <string name="err_zip_no_pgn">%s contains no PGN file</string>
+    <string name="err_7z">Error in the 7z archive: %s</string>
+    <string name="err_7z_encrypted">The 7z archive is encrypted; encrypted archives are not supported</string>
+    <string name="err_7z_memory">Not enough memory for the 7z archive</string>
+    <string name="err_7z_no_db">The 7z archive contains no .%s file</string>
 
     <!-- Fehler der Engines -->
     <string name="err_net_download">Stockfish network could not be downloaded: %s</string>
