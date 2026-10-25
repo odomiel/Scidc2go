@@ -35,5 +35,16 @@
                 <data android:mimeType="application/x-chess-pgn" />
             </intent-filter>
         </activity>
+
+        <!-- Partien und Datenbanken zum Teilen an andere Apps geben -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.share"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_paths" />
+        </provider>
     </application>
 </manifest>

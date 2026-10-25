@@ -19,6 +19,7 @@
 
 package org.scidc2go.ui
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -130,6 +131,16 @@ fun Scidc2goApp(vm: AppViewModel) {
         val snackbar = remember { SnackbarHostState() }
         LaunchedEffect(vm.message) {
             vm.message?.let { snackbar.showSnackbar(it); vm.message = null }
+        }
+        val ctx = LocalContext.current
+        LaunchedEffect(vm.shareIntent) {
+            val intent = vm.shareIntent ?: return@LaunchedEffect
+            vm.shareDone()
+            try {
+                ctx.startActivity(intent)
+            } catch (_: ActivityNotFoundException) {
+                vm.message = ctx.getString(R.string.err_no_share_app)
+            }
         }
         BackHandler(enabled = vm.screen != Screen.FILES) {
             vm.screen = when (vm.screen) {
@@ -458,6 +469,8 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                             onClick = { listMenu = false; vm.requestConvert() })
                         DropdownMenuItem({ Text(stringResource(R.string.pack_7z)) }, enabled = vm.canPack,
                             onClick = { listMenu = false; vm.requestPack() })
+                        DropdownMenuItem({ Text(stringResource(R.string.share_db)) }, enabled = vm.canShareDb,
+                            onClick = { listMenu = false; vm.shareDatabase() })
                     }
                 },
             )
@@ -651,6 +664,7 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                             cm.setPrimaryClip(ClipData.newPlainText("PGN", vm.pgnText()))
                             vm.message = ctx.getString(R.string.pgn_copied)
                         })
+                        DropdownMenuItem({ Text(stringResource(R.string.share_game)) }, onClick = { menu = false; vm.shareGame() })
                         DropdownMenuItem({ Text(stringResource(R.string.paste_pgn)) }, onClick = { menu = false; pasteDialog = true })
                         DropdownMenuItem({ Text(stringResource(R.string.copy_fen)) }, onClick = {
                             menu = false
@@ -658,6 +672,7 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                             cm.setPrimaryClip(ClipData.newPlainText("FEN", node.pos.toFen()))
                             vm.message = ctx.getString(R.string.fen_copied)
                         })
+                        DropdownMenuItem({ Text(stringResource(R.string.share_fen)) }, onClick = { menu = false; vm.shareFen(node.pos.toFen()) })
                     }
                 },
             )

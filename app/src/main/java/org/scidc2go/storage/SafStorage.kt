@@ -317,18 +317,11 @@ object SafStorage {
     fun pack7z(
         ctx: Context, treeUri: Uri, folderId: String?, entry: DbEntry, baseName: String, progress: (Float) -> Unit,
     ): Long {
-        require(entry.format.packable) { entry.format.name }
         val name = "$baseName.sc7"
         // Erst im Cache packen, damit im Ordner kein halbes Archiv liegen bleibt
         val tmp = File.createTempFile("pack", ".7z", archiveDir(ctx).apply { mkdirs() })
         try {
-            val total = entry.size.coerceAtLeast(1)
-            Archives.write7z(tmp, entry.format.exts.map { ext ->
-                "$baseName.$ext" to {
-                    val uri = entry.files[ext] ?: throw FileNotFoundException("${entry.baseName}.$ext")
-                    ctx.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("${entry.baseName}.$ext")
-                }
-            }) { progress((it.toFloat() / total).coerceAtMost(1f)) }
+            pack7zTo(ctx, entry, baseName, tmp, progress)
             val parent = DocumentsContract.buildDocumentUriUsingTree(treeUri, folderId ?: DocumentsContract.getTreeDocumentId(treeUri))
             // Nicht application/x-7z-compressed: dann hängen manche Anbieter ".7z" an den Namen an
             val uri = DocumentsContract.createDocument(ctx.contentResolver, parent, "application/octet-stream", name)
@@ -357,6 +350,27 @@ object SafStorage {
     fun convertToScid5(
         ctx: Context, treeUri: Uri, folderId: String?, baseName: String, src: ChessDatabase, progress: (Int) -> Unit,
     ): List<Int> = Scid5Database.convert(src, SafFileSet(ctx, treeUri, folderId, "", emptyMap()).sibling(baseName), progress)
+
+    /** Packt die Dateien der Datenbank [entry] als `.sc7` nach [out]; im Archiv heißen sie `[baseName].si5` usw. */
+    fun pack7zTo(ctx: Context, entry: DbEntry, baseName: String, out: File, progress: (Float) -> Unit) {
+        require(entry.format.packable) { entry.format.name }
+        val total = entry.size.coerceAtLeast(1)
+        Archives.write7z(out, entry.format.exts.map { ext ->
+            "$baseName.$ext" to {
+                val uri = entry.files[ext] ?: throw FileNotFoundException("${entry.baseName}.$ext")
+                ctx.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("${entry.baseName}.$ext")
+            }
+        }) { progress((it.toFloat() / total).coerceAtMost(1f)) }
+    }
+
+    /** Kopiert die Hauptdatei der Datenbank [entry] nach [out] (für Formate aus einer einzigen Datei). */
+    fun copyMainFile(ctx: Context, entry: DbEntry, out: File) {
+        val ext = entry.format.mainExt
+        val uri = entry.files[ext] ?: throw FileNotFoundException("${entry.baseName}.$ext")
+        (ctx.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("${entry.baseName}.$ext")).use { inp ->
+            out.outputStream().use { inp.copyTo(it, 1 shl 16) }
+        }
+    }
 
     /** Öffnet eine einzelne PGN-Datei (z.B. aus "Öffnen mit"). */
     fun openPgn(ctx: Context, uri: Uri, name: String, progress: (Float) -> Unit): ChessDatabase =

@@ -19,6 +19,7 @@ package org.scidc2go.ui
 
 import android.app.Application
 import android.app.LocaleManager
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -31,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -99,6 +101,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var db by mutableStateOf<ChessDatabase?>(null)
         private set
     private var dbEntry: DbEntry? = null
+    /** Dateien der offenen Datenbank zum Teilen; anders als [dbEntry] auch bei einzeln geöffneten Dateien. */
+    private var dbSource: DbEntry? = null
     /** Freigegebener Ordner, aus dem [dbEntry] stammt. */
     private var dbTree: Uri? = null
     var filterText by mutableStateOf("")
@@ -280,7 +284,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 busy = str(R.string.busy_reading, entry.baseName, (p * 100).toInt())
             }
         }
-        setDatabase(newDb, if (tree != null) entry else null, tree)
+        setDatabase(newDb, if (tree != null) entry else null, tree, source = entry)
     }
 
     private fun queryName(uri: Uri): String? =
@@ -288,10 +292,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (it.moveToFirst()) it.getString(0) else null
         }
 
-    private fun setDatabase(newDb: ChessDatabase, entry: DbEntry?, tree: Uri?) {
+    private fun setDatabase(newDb: ChessDatabase, entry: DbEntry?, tree: Uri?, source: DbEntry? = entry) {
         db?.close()
         db = newDb
         dbEntry = entry
+        dbSource = source
         dbTree = tree
         filterText = ""
         filtered = IntArray(newDb.gameCount) { it }
@@ -303,6 +308,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         db?.close()
         db = null
         dbEntry = null
+        dbSource = null
         dbTree = null
         filtered = IntArray(0)
         screen = Screen.FILES
@@ -617,6 +623,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val newDb = withContext(Dispatchers.IO) { SafStorage.open(ctx, tree, fresh, writable = true) {} }
             db = newDb
             dbEntry = fresh
+            dbSource = fresh
             gamesRemoved(removed)
             message = str(R.string.compacted, formatBytes(before), formatBytes(fresh.size)) +
                 if (removed.isNotEmpty()) plural(R.plurals.compacted_removed, removed.size, removed.size) else ""
@@ -712,6 +719,86 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             message = str(R.string.packed, file, formatBytes(entry.size), formatBytes(size))
             refreshFolder()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Teilen
+
+    /** Intent zum Teilen; die Oberfläche startet ihn und ruft dann [shareDone] auf. */
+    var shareIntent by mutableStateOf<Intent?>(null)
+        private set
+
+    fun shareDone() { shareIntent = null }
+
+    /** Leeres Verzeichnis für die zu teilenden Dateien; die Dateien vom letzten Teilen werden dabei gelöscht. */
+    private fun shareDir() = File(ctx.cacheDir, "share").apply { deleteRecursively(); mkdirs() }
+
+    /** Teilen-Dialog für [file] (über den FileProvider) und/oder [text]. */
+    private fun chooser(mime: String, subject: String, file: File?, text: String?): Intent {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = mime
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            if (text != null) putExtra(Intent.EXTRA_TEXT, text)
+            if (file != null) {
+                val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.share", file)
+                putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newRawUri(file.name, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
+        return Intent.createChooser(send, str(R.string.share))
+    }
+
+    /** Ersetzt Zeichen, die in Dateinamen nicht erlaubt sind. */
+    private fun fileName(s: String) = s.replace(Regex("""[\\/:*?"<>|\p{Cntrl}]"""), "_").trim().take(80)
+
+    /** Teilt die aktuelle Partie als PGN-Datei und als Text. */
+    fun shareGame() {
+        val g = game ?: return
+        runBusy(str(R.string.busy_sharing, "PGN")) {
+            val text = Pgn.write(g)
+            val title = listOf(g.white, g.black).filter { it.isNotBlank() && it != "?" }.joinToString(" – ")
+            val name = fileName(title.replace(" – ", "-")).ifEmpty { "game" }
+            val file = withContext(Dispatchers.IO) { File(shareDir(), "$name.pgn").apply { writeText(text) } }
+            // Sehr lange Partien nur als Datei, der Text passt sonst nicht sicher in den Intent
+            shareIntent = chooser("application/x-chess-pgn", title.ifEmpty { name }, file, text.takeIf { it.length < 100_000 })
+        }
+    }
+
+    /** Teilt [fen] als Text. */
+    fun shareFen(fen: String) {
+        shareIntent = chooser("text/plain", "FEN", null, fen)
+    }
+
+    /** Teilen geht für Datenbanken aus Dateien (nicht für über „Öffnen mit“ übergebene PGN-Dateien). */
+    val canShareDb get() = db != null && dbSource != null
+
+    /** Teilt die Datenbank: Formate aus mehreren Dateien als `.sc7`-Archiv, sonst die Datei selbst. */
+    fun shareDatabase() {
+        val entry = dbSource ?: return
+        runBusy(str(R.string.busy_sharing, entry.baseName)) {
+            val (file, mime) = withContext(Dispatchers.IO) {
+                val dir = shareDir()
+                if (entry.format.exts.size > 1) {
+                    val out = File(dir, "${fileName(entry.baseName)}.sc7")
+                    SafStorage.pack7zTo(ctx, entry, entry.baseName, out) { p ->
+                        busy = str(R.string.busy_packing, out.name, (p * 100).toInt())
+                    }
+                    out to "application/x-7z-compressed"
+                } else {
+                    val out = File(dir, "${fileName(entry.baseName)}.${entry.format.mainExt}")
+                    SafStorage.copyMainFile(ctx, entry, out)
+                    out to when (entry.format) {
+                        DbFormat.PGN -> "application/x-chess-pgn"
+                        DbFormat.PGN_GZ -> "application/gzip"
+                        DbFormat.PGN_ZIP -> "application/zip"
+                        DbFormat.SC7 -> "application/x-7z-compressed"
+                        else -> "application/octet-stream"
+                    }
+                }
+            }
+            shareIntent = chooser(mime, file.name, file, null)
         }
     }
 
