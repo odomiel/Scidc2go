@@ -44,7 +44,7 @@ Free software under the GNU GPL version 3 or later (see `COPYING`), with no prop
    ordinary 7z archive (LZMA2): 7-Zip recognizes it by its content and unpacks it despite the custom extension;
    archivers that go by the extension open it after renaming it to `.7z`. Conversely, the app opens any 7z archive with the
    extension `.sc7` that contains the files of a database; it recognizes the format by the files
-   (folders inside the archive do not matter). **Share database** (also in the menu) passes the database to another
+   (folders inside the archive do not matter). The **share** icon of the game list passes the database to another
    app, such as mail or Nextcloud: PGN and archives as a file, Scid and Scidb as `.sc7`.
    The detailed description of the format for other programs is in
    [docs/sc7.en.md](docs/sc7.en.md).
@@ -56,8 +56,8 @@ Free software under the GNU GPL version 3 or later (see `COPYING`), with no prop
      landscape); tapping a line plays its first move.
    - **Show comments** and **Show variations** in the menu hide comments or variations in the move list
      (the setting is remembered). The variation containing the current move always stays visible.
-   - Menu: game data, comment, promote or delete a variation, copy PGN/FEN, paste PGN, **share game** (as a PGN file
-     and text) and **share position** (FEN) with other apps.
+   - Menu: game data, comment, promote or delete a variation, copy PGN/FEN, paste PGN.
+   - **Share** (icon in the top bar): the game as a PGN file and text, or the position as FEN, to other apps.
    - **Save**: into the open Scid 5 database (replace or as a new game) or into another or a new Scid 5 database
      in the folder.
 

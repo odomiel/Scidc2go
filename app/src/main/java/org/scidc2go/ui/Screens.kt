@@ -63,6 +63,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -459,6 +460,9 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                 },
                 actions = {
                     var listMenu by remember { mutableStateOf(false) }
+                    IconButton({ vm.shareDatabase() }, enabled = vm.canShareDb) {
+                        Icon(Icons.Default.Share, stringResource(R.string.share_db))
+                    }
                     IconButton({ listMenu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.menu)) }
                     DropdownMenu(listMenu, { listMenu = false }) {
                         DropdownMenuItem({ Text(stringResource(R.string.delete_marked)) }, enabled = db.writable,
@@ -469,8 +473,6 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                             onClick = { listMenu = false; vm.requestConvert() })
                         DropdownMenuItem({ Text(stringResource(R.string.pack_7z)) }, enabled = vm.canPack,
                             onClick = { listMenu = false; vm.requestPack() })
-                        DropdownMenuItem({ Text(stringResource(R.string.share_db)) }, enabled = vm.canShareDb,
-                            onClick = { listMenu = false; vm.shareDatabase() })
                     }
                 },
             )
@@ -629,6 +631,16 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                     }
                 },
                 actions = {
+                    var shareMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton({ shareMenu = true }) { Icon(Icons.Default.Share, stringResource(R.string.share)) }
+                        DropdownMenu(shareMenu, { shareMenu = false }) {
+                            DropdownMenuItem({ Text(stringResource(R.string.share_game)) },
+                                onClick = { shareMenu = false; vm.shareGame() })
+                            DropdownMenuItem({ Text(stringResource(R.string.share_fen)) },
+                                onClick = { shareMenu = false; vm.shareFen(node.pos.toFen()) })
+                        }
+                    }
                     IconButton({ saveDialog = true }) { Icon(Icons.Default.Save, stringResource(R.string.save)) }
                     IconButton({ menu = true }) { Icon(Icons.Default.MoreVert, stringResource(R.string.menu)) }
                     DropdownMenu(menu, { menu = false }) {
@@ -664,7 +676,6 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                             cm.setPrimaryClip(ClipData.newPlainText("PGN", vm.pgnText()))
                             vm.message = ctx.getString(R.string.pgn_copied)
                         })
-                        DropdownMenuItem({ Text(stringResource(R.string.share_game)) }, onClick = { menu = false; vm.shareGame() })
                         DropdownMenuItem({ Text(stringResource(R.string.paste_pgn)) }, onClick = { menu = false; pasteDialog = true })
                         DropdownMenuItem({ Text(stringResource(R.string.copy_fen)) }, onClick = {
                             menu = false
@@ -672,7 +683,6 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                             cm.setPrimaryClip(ClipData.newPlainText("FEN", node.pos.toFen()))
                             vm.message = ctx.getString(R.string.fen_copied)
                         })
-                        DropdownMenuItem({ Text(stringResource(R.string.share_fen)) }, onClick = { menu = false; vm.shareFen(node.pos.toFen()) })
                     }
                 },
             )

@@ -44,7 +44,7 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    Es ist ein gewöhnliches 7z-Archiv (LZMA2): 7-Zip erkennt es am Inhalt und entpackt es trotz der eigenen Endung;
    Packer, die nach der Endung gehen, öffnen es nach dem Umbenennen in `.7z`. Umgekehrt öffnet die App jedes 7z-Archiv mit
    der Endung `.sc7`, das die Dateien einer Datenbank enthält; das Format erkennt sie an den Dateien
-   (Ordner im Archiv spielen keine Rolle). **Datenbank teilen** (ebenfalls im Menü) gibt die Datenbank an eine
+   (Ordner im Archiv spielen keine Rolle). Das **Teilen**-Symbol der Partieliste gibt die Datenbank an eine
    andere App weiter, etwa Mail oder Nextcloud: PGN und Archive als Datei, Scid und Scidb als `.sc7`.
    Die genaue Beschreibung des Formats für andere Programme steht in
    [docs/sc7.md](docs/sc7.md).
@@ -56,8 +56,9 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
      daneben); ein Antippen einer Variante spielt deren ersten Zug.
    - **Kommentare anzeigen** und **Varianten anzeigen** im Menü blenden Kommentare bzw. Varianten in der Zugliste
      aus (die Einstellung bleibt erhalten). Die Variante mit dem aktuellen Zug bleibt immer sichtbar.
-   - Menü: Partiedaten, Kommentar, Variante hochstufen oder löschen, PGN/FEN kopieren, PGN einfügen,
-     **Partie teilen** (als PGN-Datei und Text) und **Stellung teilen** (FEN) an andere Apps.
+   - Menü: Partiedaten, Kommentar, Variante hochstufen oder löschen, PGN/FEN kopieren, PGN einfügen.
+   - **Teilen** (Symbol in der Kopfleiste): die Partie als PGN-Datei und Text oder die Stellung als FEN an
+     andere Apps.
    - **Speichern**: in die geöffnete Scid-5-Datenbank (ersetzen oder neu) oder in eine andere bzw. neue Scid-5-Datenbank im Ordner.
 
 4. **Einstellungen** (Zahnrad): Darstellung hell, dunkel oder wie im System, die Sprache (Deutsch, Englisch oder

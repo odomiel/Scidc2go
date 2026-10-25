@@ -109,8 +109,8 @@
     <string name="truncate">Restliche Züge ab hier löschen</string>
     <string name="copy_pgn">PGN kopieren</string>
     <string name="share">Teilen</string>
-    <string name="share_game">Partie teilen (PGN)</string>
-    <string name="share_fen">Stellung teilen (FEN)</string>
+    <string name="share_game">Partie (PGN)</string>
+    <string name="share_fen">Stellung (FEN)</string>
     <string name="share_db">Datenbank teilen</string>
     <string name="busy_sharing">Bereite %s zum Teilen vor …</string>
     <string name="err_no_share_app">Keine App zum Teilen vorhanden</string>
