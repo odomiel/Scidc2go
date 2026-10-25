@@ -44,7 +44,8 @@ Free software under the GNU GPL version 3 or later (see `COPYING`), with no prop
    ordinary 7z archive (LZMA2): 7-Zip recognizes it by its content and unpacks it despite the custom extension;
    archivers that go by the extension open it after renaming it to `.7z`. Conversely, the app opens any 7z archive with the
    extension `.sc7` that contains the files of a database; it recognizes the format by the files
-   (folders inside the archive do not matter).
+   (folders inside the archive do not matter). The detailed description of the format for other programs is in
+   [docs/sc7.en.md](docs/sc7.en.md).
 3. Tap a game to open the board view.
    - Entering moves: drag a piece to its target square (or tap the piece and then the target square).
      If the move differs from the game, a variation is created.

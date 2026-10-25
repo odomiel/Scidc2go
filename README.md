@@ -44,7 +44,8 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    Es ist ein gewöhnliches 7z-Archiv (LZMA2): 7-Zip erkennt es am Inhalt und entpackt es trotz der eigenen Endung;
    Packer, die nach der Endung gehen, öffnen es nach dem Umbenennen in `.7z`. Umgekehrt öffnet die App jedes 7z-Archiv mit
    der Endung `.sc7`, das die Dateien einer Datenbank enthält; das Format erkennt sie an den Dateien
-   (Ordner im Archiv spielen keine Rolle).
+   (Ordner im Archiv spielen keine Rolle). Die genaue Beschreibung des Formats für andere Programme steht in
+   [docs/sc7.md](docs/sc7.md).
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
      Weicht der Zug von der Partie ab, entsteht eine Variante.
