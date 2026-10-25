@@ -387,6 +387,16 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                 navigationIcon = {
                     IconButton({ vm.closeDatabase() }) { Icon(Icons.Default.Close, "Schließen") }
                 },
+                actions = {
+                    if (db.writable) {
+                        var listMenu by remember { mutableStateOf(false) }
+                        IconButton({ listMenu = true }) { Icon(Icons.Default.MoreVert, "Menü") }
+                        DropdownMenu(listMenu, { listMenu = false }) {
+                            DropdownMenuItem({ Text("Markierte Partien löschen") },
+                                onClick = { listMenu = false; vm.requestDeleteMarked() })
+                        }
+                    }
+                },
             )
         },
         snackbarHost = { if (!compact) SnackbarHost(snackbar) },
@@ -448,6 +458,11 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                                     enabled = db.writable,
                                     onClick = { menuFor = -1; vm.toggleDeleted(idx) },
                                 )
+                                DropdownMenuItem(
+                                    { Text("Partie löschen") },
+                                    enabled = db.writable,
+                                    onClick = { menuFor = -1; vm.requestDelete(listOf(idx)) },
+                                )
                             }
                         }
                         HorizontalDivider()
@@ -455,6 +470,26 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                 }
             }
         }
+    }
+    if (vm.deleteRequest.isNotEmpty()) {
+        val n = vm.deleteRequest.size
+        AlertDialog(
+            onDismissRequest = { vm.cancelDelete() },
+            title = { Text(if (n == 1) "Partie löschen?" else "$n Partien löschen?") },
+            text = {
+                val what = if (n == 1) {
+                    val h = runCatching { db.header(vm.deleteRequest[0]) }.getOrNull()
+                    "Partie ${vm.deleteRequest[0] + 1}" + (h?.let { " (${it.white} – ${it.black})" } ?: "")
+                } else {
+                    "$n Partien"
+                }
+                Text("$what ${if (n == 1) "wird" else "werden"} endgültig aus ${db.name} entfernt. " +
+                    "Das lässt sich nicht rückgängig machen. " +
+                    "Die folgenden Partien rücken in der Nummerierung nach vorn.")
+            },
+            confirmButton = { TextButton({ vm.confirmDelete() }) { Text("Löschen") } },
+            dismissButton = { TextButton({ vm.cancelDelete() }) { Text("Abbrechen") } },
+        )
     }
 }
 

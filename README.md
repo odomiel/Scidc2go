@@ -20,7 +20,10 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
    die App die Datenbank direkt. Sonst fragt sie einmalig nach dem Ordner, denn Android erlaubt den Zugriff auf
    die übrigen Dateien nur mit Ordnerfreigabe. Fehlt eine Datei der Datenbank, meldet die App welche.
 2. Datenbank antippen, um die Partieliste zu sehen. Das Suchfeld durchsucht Spieler, Turnier, Ort, Datum, ECO und Runde.
-   Langes Drücken auf eine Partie setzt oder entfernt die Löschmarkierung (nur Scid 5).
+   Langes Drücken auf eine Partie öffnet ein Menü: Löschmarkierung setzen oder entfernen, oder die Partie
+   endgültig löschen (nur Scid 5). Das Menü (⋮) der Partieliste löscht alle markierten Partien auf einmal.
+   Gelöschte Partien verschwinden aus dem Index; ihre Daten bleiben bis zum Komprimieren in Scid
+   ungenutzt in der `.sg5`-Datei.
 3. Partie antippen, um die Brettansicht zu öffnen.
    - Züge eingeben: Figur auf das Zielfeld ziehen (oder Figur und Zielfeld nacheinander antippen).
      Weicht der Zug von der Partie ab, entsteht eine Variante.

@@ -58,6 +58,9 @@ interface ChessDatabase : Closeable {
 
     /** Setzt oder löscht die Löschmarkierung. */
     fun setDeleted(index: Int, deleted: Boolean): Unit = throw IOException("Datenbank ist schreibgeschützt")
+
+    /** Entfernt die Partien [indices] endgültig; die folgenden Partien rücken nach vorn. */
+    fun deleteGames(indices: Collection<Int>): Unit = throw IOException("Datenbank ist schreibgeschützt")
 }
 
 /**

@@ -502,6 +502,47 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Partien, die nach Rückfrage endgültig gelöscht werden sollen (leer = keine Rückfrage offen). */
+    var deleteRequest by mutableStateOf<List<Int>>(emptyList())
+        private set
+
+    fun requestDelete(indices: List<Int>) {
+        val d = db ?: return
+        if (!d.writable) { message = "Diese Datenbank ist schreibgeschützt"; return }
+        deleteRequest = indices
+    }
+
+    /** Fragt nach, ob alle zum Löschen markierten Partien gelöscht werden sollen. */
+    fun requestDeleteMarked() {
+        val d = db ?: return
+        runBusy("Suche markierte Partien …") {
+            val marked = withContext(Dispatchers.IO) { (0 until d.gameCount).filter { d.header(it).deleted } }
+            if (marked.isEmpty()) message = "Keine Partie ist zum Löschen markiert" else requestDelete(marked)
+        }
+    }
+
+    fun cancelDelete() { deleteRequest = emptyList() }
+
+    fun confirmDelete() {
+        val d = db ?: return
+        val indices = deleteRequest
+        deleteRequest = emptyList()
+        if (indices.isEmpty()) return
+        runBusy("Lösche ${indices.size} Partie(n) …") {
+            withContext(Dispatchers.IO) { d.deleteGames(indices) }
+            // die offene Partie gehört nicht mehr zur Datenbank oder ist nach vorn gerückt
+            if (gameIndex in indices) {
+                gameIndex = -1
+                dirty = true
+            } else if (gameIndex >= 0) {
+                gameIndex -= indices.count { it < gameIndex }
+            }
+            message = if (indices.size == 1) "Partie gelöscht" else "${indices.size} Partien gelöscht"
+            search(filterText)
+            refreshFolder()
+        }
+    }
+
     fun pgnText(): String = game?.let { Pgn.write(it) } ?: ""
 
     fun importPgnText(text: String) {

@@ -116,4 +116,34 @@ class ScidTest {
         // Referenz-PGN für den Vergleich mit Scid
         File(outDir, "rt-expected.pgn").writeText(list.joinToString("") { Pgn.write(it) })
     }
+
+    @Test fun deleteScid5Games() {
+        val dir = createTempDirectory().toFile()
+        val rnd = Random(7)
+        val list = ArrayList<Game>()
+        Scid5Database.create(JavaFileSet(dir, "del")).use { db ->
+            repeat(20) { list.add(randomGame(rnd).also { g -> db.addGame(g) }) }
+            db.setDeleted(4, true)
+            db.deleteGames(listOf(0, 3, 19, 10))
+            for (i in listOf(19, 10, 3, 0)) list.removeAt(i)
+            assertEquals(list.size, db.gameCount)
+            // nach dem Löschen anfügen und ersetzen
+            list.add(randomGame(rnd).also { g -> db.addGame(g) })
+            val repl = randomGame(rnd)
+            db.replaceGame(2, repl); list[2] = repl
+        }
+        Scid5Database.open(JavaFileSet(dir, "del"), false).use { re ->
+            assertEquals(list.size, re.gameCount)
+            assertEquals(list.size * Scid5Database.ENTRY_SIZE.toLong(), File(dir, "del.si5").length())
+            for (i in list.indices) assertEquals("Partie $i", Pgn.write(list[i]), Pgn.write(re.loadGame(i)))
+            // die frühere Partie 4 ist jetzt Partie 2 und hat ihre Löschmarkierung behalten
+            assertEquals(true, re.header(2).deleted)
+            assertEquals(1, (0 until re.gameCount).count { re.header(it).deleted })
+        }
+        Scid5Database.open(JavaFileSet(dir, "del"), true).use { db ->
+            db.deleteGames((0 until db.gameCount).toList())
+            assertEquals(0, db.gameCount)
+        }
+        assertEquals(0L, File(dir, "del.si5").length())
+    }
 }

@@ -265,6 +265,31 @@ class Scid5Database private constructor(
         sync()
     }
 
+    /**
+     * Entfernt die Indexeinträge der Partien. Ihre Daten bleiben ungenutzt in der .sg5-Datei,
+     * bis die Datenbank (z.B. in Scid) komprimiert wird; so werden die Partiedaten nie umgeschrieben.
+     */
+    @Synchronized
+    override fun deleteGames(indices: Collection<Int>) {
+        ensureWritable()
+        val remove = indices.toHashSet()
+        if (remove.isEmpty()) return
+        if (remove.any { it !in 0 until count }) throw IndexOutOfBoundsException()
+        val kept = ByteArray((count - remove.size) * ENTRY_SIZE)
+        var n = 0
+        for (i in 0 until count) {
+            if (i in remove) continue
+            System.arraycopy(index, i * ENTRY_SIZE, kept, n * ENTRY_SIZE, ENTRY_SIZE)
+            n++
+        }
+        val iw = indexWrite!!
+        iw.writeFully(0, kept)
+        iw.truncate(kept.size.toLong())
+        index = kept
+        count = n
+        sync()
+    }
+
     override fun close() {
         gameRead.close()
         gameWrite?.close()
