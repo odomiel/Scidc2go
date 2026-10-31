@@ -17,6 +17,19 @@ Schachdatenbanken unterwegs: eine schlanke Android-App für Smartphone und Table
 
 Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne proprietäre Bestandteile.
 
+## Installation
+
+Die APK liegt bei den [Releases](https://erebor.mittelerde.de:3053/forgejouser/scidc2go/releases) (Android 10 oder neuer). Updates lassen sich mit
+[Obtainium](https://github.com/ImranR98/Obtainium) beziehen: die Adresse des Repositorys als Forgejo-Quelle eintragen.
+
+Alle Releases sind mit demselben Schlüssel signiert. SHA-256-Fingerabdruck des Zertifikats
+(zum Prüfen mit `apksigner verify --print-certs` oder [AppVerifier](https://github.com/soupslurpr/AppVerifier)):
+
+```
+org.scidc2go
+50:CB:55:32:E4:89:68:80:C4:A0:29:44:71:23:3A:0B:BA:CE:52:51:AC:19:F1:F9:D5:25:AC:E3:AE:94:5A:F1
+```
+
 ## Bedienung
 
 1. **Ordner wählen**: den Ordner mit den Datenbanken freigeben (Storage Access Framework).
@@ -79,7 +92,7 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
 
 ## Bauen
 
-Benötigt: JDK 17, Android SDK (Plattform 35) und für Stockfish das Android NDK (r27c oder neuer).
+Benötigt: JDK 17, Android SDK (Plattform 37) und für Stockfish das Android NDK (r27c oder neuer).
 
 ```sh
 tools/build-stockfish.sh        # Stockfish für arm64-v8a, armeabi-v7a, x86_64; trägt das NNUE-Netz in StockfishNet.kt ein

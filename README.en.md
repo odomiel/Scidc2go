@@ -17,6 +17,19 @@ Chess databases on the go: a lean Android app for phones and tablets.
 
 Free software under the GNU GPL version 3 or later (see `COPYING`), with no proprietary components.
 
+## Installation
+
+The APK is available from the [releases](https://erebor.mittelerde.de:3053/forgejouser/scidc2go/releases) (Android 10 or later). Updates can be obtained with
+[Obtainium](https://github.com/ImranR98/Obtainium): add the repository address as a Forgejo source.
+
+All releases are signed with the same key. SHA-256 fingerprint of the certificate
+(to check with `apksigner verify --print-certs` or [AppVerifier](https://github.com/soupslurpr/AppVerifier)):
+
+```
+org.scidc2go
+50:CB:55:32:E4:89:68:80:C4:A0:29:44:71:23:3A:0B:BA:CE:52:51:AC:19:F1:F9:D5:25:AC:E3:AE:94:5A:F1
+```
+
 ## Usage
 
 1. **Choose folder**: grant access to the folder containing the databases (Storage Access Framework).
@@ -78,7 +91,7 @@ Free software under the GNU GPL version 3 or later (see `COPYING`), with no prop
 
 ## Building
 
-Requirements: JDK 17, Android SDK (platform 35) and, for Stockfish, the Android NDK (r27c or later).
+Requirements: JDK 17, Android SDK (platform 37) and, for Stockfish, the Android NDK (r27c or later).
 
 ```sh
 tools/build-stockfish.sh        # Stockfish for arm64-v8a, armeabi-v7a, x86_64; enters the NNUE network in StockfishNet.kt
