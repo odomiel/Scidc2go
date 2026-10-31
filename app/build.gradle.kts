@@ -13,7 +13,7 @@ android {
         applicationId = "org.scidc2go"
         // Stockfish wird fuer Android API 29 gebaut
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 21
         versionName = "0.16.0"
     }
