@@ -106,6 +106,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -138,13 +139,14 @@ fun Scidc2goApp(vm: AppViewModel) {
             vm.message?.let { snackbar.showSnackbar(it); vm.message = null }
         }
         val ctx = LocalContext.current
+        val res = LocalResources.current
         LaunchedEffect(vm.shareIntent) {
             val intent = vm.shareIntent ?: return@LaunchedEffect
             vm.shareDone()
             try {
                 ctx.startActivity(intent)
             } catch (_: ActivityNotFoundException) {
-                vm.message = ctx.getString(R.string.err_no_share_app)
+                vm.message = res.getString(R.string.err_no_share_app)
             }
         }
         BackHandler(enabled = vm.screen != Screen.FILES) {
@@ -614,6 +616,7 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
     val game = vm.game ?: return
     val node = vm.node ?: game.root
     val ctx = LocalContext.current
+    val res = LocalResources.current
     var menu by remember { mutableStateOf(false) }
     var tagDialog by remember { mutableStateOf(false) }
     var saveDialog by remember { mutableStateOf(false) }
@@ -690,14 +693,14 @@ fun BoardScreen(vm: AppViewModel, snackbar: SnackbarHostState, wide: Boolean) {
                             menu = false
                             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             cm.setPrimaryClip(ClipData.newPlainText("PGN", vm.pgnText()))
-                            vm.message = ctx.getString(R.string.pgn_copied)
+                            vm.message = res.getString(R.string.pgn_copied)
                         })
                         DropdownMenuItem({ Text(stringResource(R.string.paste_pgn)) }, onClick = { menu = false; pasteDialog = true })
                         DropdownMenuItem({ Text(stringResource(R.string.copy_fen)) }, onClick = {
                             menu = false
                             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             cm.setPrimaryClip(ClipData.newPlainText("FEN", node.pos.toFen()))
-                            vm.message = ctx.getString(R.string.fen_copied)
+                            vm.message = res.getString(R.string.fen_copied)
                         })
                     }
                 },
