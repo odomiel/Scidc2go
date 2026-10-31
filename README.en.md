@@ -19,8 +19,8 @@ Free software under the GNU GPL version 3 or later (see `COPYING`), with no prop
 
 ## Installation
 
-The APK is available from the [releases](https://erebor.mittelerde.de:3053/forgejouser/scidc2go/releases) (Android 10 or later). Updates can be obtained with
-[Obtainium](https://github.com/ImranR98/Obtainium): add the repository address as a Forgejo source.
+The APK is available from the [releases](https://forgejo.mydir.ipv64.net/forgejouser/scidc2go/releases) (Android 10 or later). Updates can be obtained with
+[Obtainium](https://github.com/ImranR98/Obtainium): add `https://forgejo.mydir.ipv64.net/forgejouser/scidc2go` as a Forgejo source.
 
 All releases are signed with the same key. SHA-256 fingerprint of the certificate
 (to check with `apksigner verify --print-certs` or [AppVerifier](https://github.com/soupslurpr/AppVerifier)):

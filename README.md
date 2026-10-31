@@ -19,8 +19,8 @@ Freie Software unter der GNU GPL Version 3 oder später (siehe `COPYING`), ohne 
 
 ## Installation
 
-Die APK liegt bei den [Releases](https://erebor.mittelerde.de:3053/forgejouser/scidc2go/releases) (Android 10 oder neuer). Updates lassen sich mit
-[Obtainium](https://github.com/ImranR98/Obtainium) beziehen: die Adresse des Repositorys als Forgejo-Quelle eintragen.
+Die APK liegt bei den [Releases](https://forgejo.mydir.ipv64.net/forgejouser/scidc2go/releases) (Android 10 oder neuer). Updates lassen sich mit
+[Obtainium](https://github.com/ImranR98/Obtainium) beziehen: `https://forgejo.mydir.ipv64.net/forgejouser/scidc2go` als Forgejo-Quelle eintragen.
 
 Alle Releases sind mit demselben Schlüssel signiert. SHA-256-Fingerabdruck des Zertifikats
 (zum Prüfen mit `apksigner verify --print-certs` oder [AppVerifier](https://github.com/soupslurpr/AppVerifier)):
