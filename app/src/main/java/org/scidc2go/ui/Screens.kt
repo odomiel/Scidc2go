@@ -113,6 +113,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
@@ -265,7 +266,7 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
                     items(vm.dbEntries, key = { it.baseName + it.format }) { e ->
                         ListItem(
                             headlineContent = { Text(e.baseName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            supportingContent = { Text(formatSize(e.size)) },
+                            supportingContent = { Text(formatSize(e.size, LocalConfiguration.current.locales[0])) },
                             trailingContent = { AssistChip({ vm.openDatabase(e) }, { Text(stringResource(e.format.label)) }) },
                             modifier = Modifier.combinedClickable(onClick = { vm.openDatabase(e) }),
                         )
@@ -303,10 +304,11 @@ fun FilesScreen(vm: AppViewModel, snackbar: SnackbarHostState) {
     }
 }
 
-private fun formatSize(b: Long): String = when {
-    b >= 1L shl 30 -> String.format("%.1f GB", b / (1L shl 30).toDouble())
-    b >= 1L shl 20 -> String.format("%.1f MB", b / (1L shl 20).toDouble())
-    b >= 1L shl 10 -> String.format("%.0f KB", b / 1024.0)
+/** Dateigröße für die Anzeige; [locale] bestimmt das Dezimalzeichen (die Sprache der Oberfläche). */
+internal fun formatSize(b: Long, locale: java.util.Locale): String = when {
+    b >= 1L shl 30 -> String.format(locale, "%.1f GB", b / (1L shl 30).toDouble())
+    b >= 1L shl 20 -> String.format(locale, "%.1f MB", b / (1L shl 20).toDouble())
+    b >= 1L shl 10 -> String.format(locale, "%.0f KB", b / 1024.0)
     else -> "$b B"
 }
 
@@ -605,7 +607,7 @@ fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean)
                         stringResource(R.string.delete_one_text, vm.deleteRequest[0] + 1,
                             h?.let { " (${it.white} – ${it.black})" } ?: "", db.name)
                     } else {
-                        stringResource(R.string.delete_many_text, n, db.name)
+                        pluralStringResource(R.plurals.delete_many_text, n, n, db.name)
                     },
                 )
             },

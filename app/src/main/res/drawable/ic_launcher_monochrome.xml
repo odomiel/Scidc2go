@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Einfarbiges Designsymbol (Android 13+): Umriss des Springers nach cburnett (GPLv2+) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="31.5" android:translateY="31.5">
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="1.5"
+            android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M22,10c10.5,1 16.5,8 16,29H15c0,-9 10,-6.5 8,-21"/>
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="1.5"
+            android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M24,18c0.38,2.91 -5.55,7.37 -8,9 -3,2 -2.82,4.34 -5,4 -1.042,-0.94 1.41,-3.04 0,-3 -1,0 0.19,1.23 -1,2 -1,0 -4.003,1 -4,-4 0,-2 6,-12 6,-12s1.89,-1.9 2,-3.5c-0.73,-0.994 -0.5,-2 -0.5,-3 1,-1 3,2.5 3,2.5h2s0.78,-1.992 2.5,-3c1,0 1,3 1,3"/>
+        <path android:fillColor="#FFFFFF" android:strokeColor="#FFFFFF" android:strokeWidth="1.5"
+            android:pathData="M9.5,25.5a0.5,0.5 0,1 1,-1 0,0.5 0.5,0 1,1 1,0"/>
+    </group>
+</vector>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Allgemein -->
     <string name="ok">OK</string>
     <string name="cancel">Abbrechen</string>
@@ -30,7 +30,7 @@
     <string name="open_files">Dateien öffnen</string>
     <string name="board">Brett</string>
     <string name="new_scid5_db_short">Neue Scid-5-DB</string>
-    <string name="choose_folder_hint">Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN, auch gepackt). Oder öffne einzelne Dateien.</string>
+    <string name="choose_folder_hint" tools:ignore="TypographyFractions">Wähle den Ordner, in dem deine Datenbanken liegen (Scid 3/4/5, Scidb, PGN, auch gepackt). Oder öffne einzelne Dateien.</string>
     <string name="no_databases">Keine Datenbanken in diesem Ordner.</string>
     <string name="new_scid5_db">Neue Scid-5-Datenbank</string>
     <string name="new_scid5_db_dots">Neue Scid-5-Datenbank …</string>
@@ -59,7 +59,7 @@
     <string name="oex_hint">Weitere Engines stammen aus installierten Engine-Apps (Open Exchange).</string>
 
     <!-- Über -->
-    <string name="about_text">Schachdatenbanken unterwegs: lesen von Scid 3/4/5, Scidb und PGN (auch Scidb-Archive .scv sowie PGN als .gz oder .zip), schreiben von Scid 5.</string>
+    <string name="about_text" tools:ignore="TypographyFractions">Schachdatenbanken unterwegs: lesen von Scid 3/4/5, Scidb und PGN (auch Scidb-Archive .scv sowie PGN als .gz oder .zip), schreiben von Scid 5.</string>
     <string name="about_license">Freie Software unter der GNU General Public License, Version 3 oder später. Ohne Gewähr. Quelltext und Lizenztext liegen dem Projekt bei.</string>
     <string name="about_components">Enthaltene freie Komponenten:</string>
     <string name="about_pieces">• Schachfiguren „cburnett“ von Colin M.L. Burnett – GPLv2+</string>
@@ -95,7 +95,10 @@
         <item quantity="other">%d Partien löschen?</item>
     </plurals>
     <string name="delete_one_text">Partie %1$d%2$s wird endgültig aus %3$s entfernt. Das lässt sich nicht rückgängig machen. Die folgenden Partien rücken in der Nummerierung nach vorn.</string>
-    <string name="delete_many_text">%1$d Partien werden endgültig aus %2$s entfernt. Das lässt sich nicht rückgängig machen. Die folgenden Partien rücken in der Nummerierung nach vorn.</string>
+    <plurals name="delete_many_text">
+        <item quantity="one">%1$d Partie wird endgültig aus %2$s entfernt. Das lässt sich nicht rückgängig machen. Die folgenden Partien rücken in der Nummerierung nach vorn.</item>
+        <item quantity="other">%1$d Partien werden endgültig aus %2$s entfernt. Das lässt sich nicht rückgängig machen. Die folgenden Partien rücken in der Nummerierung nach vorn.</item>
+    </plurals>
 
     <!-- Brett -->
     <string name="modified">geändert</string>
@@ -149,7 +152,7 @@
     <string name="result_unknown">Unbekannt oder offen</string>
     <string name="tag_date">Datum (JJJJ.MM.TT)</string>
     <string name="tag_round">Runde</string>
-    <string name="tag_result">Ergebnis (1-0, 0-1, 1/2-1/2, *)</string>
+    <string name="tag_result" tools:ignore="TypographyFractions,TypographyDashes">Ergebnis (1-0, 0-1, 1/2-1/2, *)</string>
     <string name="tag_annotator">Kommentator</string>
 
     <!-- Speichern -->
@@ -200,7 +203,10 @@
         <item quantity="one">In Scid 5 konvertiert: %1$s (%2$d Partie)</item>
         <item quantity="other">In Scid 5 konvertiert: %1$s (%2$d Partien)</item>
     </plurals>
-    <string name="converted_failed">, %1$d nicht übernommen (Partien %2$s)</string>
+    <plurals name="converted_failed">
+        <item quantity="one">, %1$d nicht übernommen (Partie %2$s)</item>
+        <item quantity="other">, %1$d nicht übernommen (Partien %2$s)</item>
+    </plurals>
     <string name="packed">%1$s gepackt: %2$s → %3$s</string>
     <string name="engine_exited">%s wurde unerwartet beendet</string>
 

@@ -713,7 +713,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val done = total - failed.size
             message = plural(R.plurals.converted, done, clean, done) +
                 if (failed.isNotEmpty()) {
-                    str(R.string.converted_failed, failed.size,
+                    plural(R.plurals.converted_failed, failed.size, failed.size,
                         failed.take(5).joinToString { "${it + 1}" } + if (failed.size > 5) " …" else "")
                 } else ""
             refreshFolder()
@@ -839,11 +839,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun formatBytes(b: Long) = when {
-        b >= 1L shl 20 -> String.format("%.1f MB", b / (1L shl 20).toDouble())
-        b >= 1L shl 10 -> String.format("%.0f KB", b / 1024.0)
-        else -> "$b B"
-    }
+    private fun formatBytes(b: Long) = formatSize(b, ctx.resources.configuration.locales[0])
 
     fun pgnText(): String = game?.let { Pgn.write(it) } ?: ""
 

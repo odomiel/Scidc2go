@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Standardsprache Englisch; die deutschen Texte stehen in values-de/strings.xml -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">Scidc2go</string>
 
     <!-- Allgemein -->
@@ -40,7 +40,7 @@
     <string name="open_files">Open files</string>
     <string name="board">Board</string>
     <string name="new_scid5_db_short">New Scid 5 DB</string>
-    <string name="choose_folder_hint">Choose the folder that contains your databases (Scid 3/4/5, Scidb, PGN, also compressed). Or open individual files.</string>
+    <string name="choose_folder_hint" tools:ignore="TypographyFractions">Choose the folder that contains your databases (Scid 3/4/5, Scidb, PGN, also compressed). Or open individual files.</string>
     <string name="no_databases">No databases in this folder.</string>
     <string name="new_scid5_db">New Scid 5 database</string>
     <string name="new_scid5_db_dots">New Scid 5 database …</string>
@@ -69,7 +69,7 @@
     <string name="oex_hint">Additional engines come from installed engine apps (Open Exchange).</string>
 
     <!-- Über -->
-    <string name="about_text">Chess databases on the go: reads Scid 3/4/5, Scidb and PGN (also Scidb archives .scv and PGN as .gz or .zip), writes Scid 5.</string>
+    <string name="about_text" tools:ignore="TypographyFractions">Chess databases on the go: reads Scid 3/4/5, Scidb and PGN (also Scidb archives .scv and PGN as .gz or .zip), writes Scid 5.</string>
     <string name="about_license">Free software under the GNU General Public License, version 3 or later. No warranty. Source code and license text come with the project.</string>
     <string name="about_components">Included free components:</string>
     <string name="about_pieces">• Chess pieces “cburnett” by Colin M.L. Burnett – GPLv2+</string>
@@ -105,7 +105,10 @@
         <item quantity="other">Delete %d games?</item>
     </plurals>
     <string name="delete_one_text">Game %1$d%2$s will be removed permanently from %3$s. This cannot be undone. The following games move up in the numbering.</string>
-    <string name="delete_many_text">%1$d games will be removed permanently from %2$s. This cannot be undone. The following games move up in the numbering.</string>
+    <plurals name="delete_many_text">
+        <item quantity="one">%1$d game will be removed permanently from %2$s. This cannot be undone. The following games move up in the numbering.</item>
+        <item quantity="other">%1$d games will be removed permanently from %2$s. This cannot be undone. The following games move up in the numbering.</item>
+    </plurals>
 
     <!-- Brett -->
     <string name="modified">modified</string>
@@ -159,7 +162,7 @@
     <string name="result_unknown">Unknown or ongoing</string>
     <string name="tag_date">Date (YYYY.MM.DD)</string>
     <string name="tag_round">Round</string>
-    <string name="tag_result">Result (1-0, 0-1, 1/2-1/2, *)</string>
+    <string name="tag_result" tools:ignore="TypographyFractions,TypographyDashes">Result (1-0, 0-1, 1/2-1/2, *)</string>
     <string name="tag_eco" translatable="false">ECO</string>
     <string name="tag_annotator">Annotator</string>
 
@@ -211,7 +214,10 @@
         <item quantity="one">Converted to Scid 5: %1$s (%2$d game)</item>
         <item quantity="other">Converted to Scid 5: %1$s (%2$d games)</item>
     </plurals>
-    <string name="converted_failed">, %1$d not transferred (games %2$s)</string>
+    <plurals name="converted_failed">
+        <item quantity="one">, %1$d not transferred (game %2$s)</item>
+        <item quantity="other">, %1$d not transferred (games %2$s)</item>
+    </plurals>
     <string name="packed">%1$s packed: %2$s → %3$s</string>
     <string name="engine_exited">%s terminated unexpectedly</string>
 
