@@ -152,6 +152,11 @@
     <string name="tag_event">Event</string>
     <string name="tag_site">Site</string>
     <string name="pick_date">Choose date</string>
+    <string name="pick_result">Choose result</string>
+    <string name="result_white">White wins</string>
+    <string name="result_black">Black wins</string>
+    <string name="result_draw">Draw</string>
+    <string name="result_unknown">Unknown or ongoing</string>
     <string name="tag_date">Date (YYYY.MM.DD)</string>
     <string name="tag_round">Round</string>
     <string name="tag_result">Result (1-0, 0-1, 1/2-1/2, *)</string>

@@ -142,6 +142,11 @@
     <string name="tag_event">Turnier</string>
     <string name="tag_site">Ort</string>
     <string name="pick_date">Datum auswählen</string>
+    <string name="pick_result">Ergebnis auswählen</string>
+    <string name="result_white">Weiß gewinnt</string>
+    <string name="result_black">Schwarz gewinnt</string>
+    <string name="result_draw">Remis</string>
+    <string name="result_unknown">Unbekannt oder offen</string>
     <string name="tag_date">Datum (JJJJ.MM.TT)</string>
     <string name="tag_round">Runde</string>
     <string name="tag_result">Ergebnis (1-0, 0-1, 1/2-1/2, *)</string>

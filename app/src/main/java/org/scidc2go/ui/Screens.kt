@@ -59,6 +59,7 @@ import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
@@ -873,6 +874,12 @@ private fun EnginePanel(vm: AppViewModel) {
     }
 }
 
+/** Die PGN-Ergebnisse zur Auswahl im Feld „Ergebnis“; andere Werte lassen sich von Hand eintragen. */
+private val RESULTS = listOf(
+    "1-0" to R.string.result_white, "0-1" to R.string.result_black,
+    "1/2-1/2" to R.string.result_draw, "*" to R.string.result_unknown,
+)
+
 @Composable
 private fun TagDialog(game: Game, onDismiss: () -> Unit, onOk: (Map<String, String>) -> Unit) {
     val keys = listOf("White", "WhiteElo", "Black", "BlackElo", "Event", "Site", "Date", "Round", "Result", "ECO", "Annotator")
@@ -884,6 +891,7 @@ private fun TagDialog(game: Game, onDismiss: () -> Unit, onOk: (Map<String, Stri
     )
     val values = remember { keys.associateWith { mutableStateOf(game.tags[it] ?: "") } }
     var datePicker by remember { mutableStateOf(false) }
+    var resultMenu by remember { mutableStateOf(false) }
     if (datePicker) {
         val date = values.getValue("Date")
         // unvollständiges Datum (z.B. 2024.??.??): Kalender wenigstens im bekannten Jahr öffnen
@@ -915,9 +923,27 @@ private fun TagDialog(game: Game, onDismiss: () -> Unit, onOk: (Map<String, Stri
                         st.value, { st.value = it }, Modifier.fillMaxWidth(),
                         label = { Text(labels[k]?.let { stringResource(it) } ?: k) }, singleLine = true,
                         keyboardOptions = if (k.endsWith("Elo")) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
-                        trailingIcon = if (k == "Date") {
-                            { IconButton({ datePicker = true }) { Icon(Icons.Default.CalendarMonth, stringResource(R.string.pick_date)) } }
-                        } else null,
+                        trailingIcon = when (k) {
+                            "Date" -> {
+                                { IconButton({ datePicker = true }) { Icon(Icons.Default.CalendarMonth, stringResource(R.string.pick_date)) } }
+                            }
+                            "Result" -> {
+                                {
+                                    Box {
+                                        IconButton({ resultMenu = true }) { Icon(Icons.Default.ArrowDropDown, stringResource(R.string.pick_result)) }
+                                        DropdownMenu(resultMenu, { resultMenu = false }) {
+                                            for ((r, label) in RESULTS) {
+                                                DropdownMenuItem({ Text("$r  ${stringResource(label)}") }, onClick = {
+                                                    st.value = r
+                                                    resultMenu = false
+                                                })
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            else -> null
+                        },
                     )
                 }
             }
