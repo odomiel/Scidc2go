@@ -14,7 +14,6 @@ android {
         // Stockfish wird fuer Android API 29 gebaut
         minSdk = 29
         // 37 erst, wenn auf Android 17 getestet werden kann
-        //noinspection OldTargetApi
         targetSdk = 36
         versionCode = 23
         versionName = "0.17.0"
