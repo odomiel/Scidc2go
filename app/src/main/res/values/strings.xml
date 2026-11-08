@@ -151,6 +151,7 @@
     <string name="tag_black_elo">Black Elo</string>
     <string name="tag_event">Event</string>
     <string name="tag_site">Site</string>
+    <string name="pick_date">Choose date</string>
     <string name="tag_date">Date (YYYY.MM.DD)</string>
     <string name="tag_round">Round</string>
     <string name="tag_result">Result (1-0, 0-1, 1/2-1/2, *)</string>

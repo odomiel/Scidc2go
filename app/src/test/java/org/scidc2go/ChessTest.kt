@@ -101,4 +101,10 @@ class ChessTest {
         assertEquals("1. e4 e5 2. Nf3 Nc6 ( 2... d6 3. d4 ) 3. Bb5 *", Pgn.write(g).substringAfter("\n\n").trim())
     }
 
+    @Test fun pgnDate() {
+        val ms = Pgn.dateToMillis("2024.02.29")!!
+        assertEquals("2024.02.29", Pgn.millisToDate(ms))
+        assertEquals(0L, Pgn.dateToMillis("1970.01.01"))
+        for (bad in listOf("2024.??.??", "????.??.??", "2023.02.29", "2024.13.01", "")) assertEquals(bad, null, Pgn.dateToMillis(bad))
+    }
 }

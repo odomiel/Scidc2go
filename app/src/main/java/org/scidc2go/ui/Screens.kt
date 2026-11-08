@@ -59,6 +59,7 @@ import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -76,6 +77,8 @@ import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -100,6 +103,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -122,6 +126,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import org.scidc2go.R
 import org.scidc2go.chess.Game
 import org.scidc2go.chess.Opening
+import org.scidc2go.chess.Pgn
 import org.scidc2go.engine.StockfishNet
 import org.scidc2go.storage.DbEntry
 
@@ -878,6 +883,27 @@ private fun TagDialog(game: Game, onDismiss: () -> Unit, onOk: (Map<String, Stri
         "ECO" to R.string.tag_eco, "Annotator" to R.string.tag_annotator,
     )
     val values = remember { keys.associateWith { mutableStateOf(game.tags[it] ?: "") } }
+    var datePicker by remember { mutableStateOf(false) }
+    if (datePicker) {
+        val date = values.getValue("Date")
+        // unvollständiges Datum (z.B. 2024.??.??): Kalender wenigstens im bekannten Jahr öffnen
+        val year = date.value.take(4).toIntOrNull()
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = Pgn.dateToMillis(date.value),
+            initialDisplayedMonthMillis = Pgn.dateToMillis(date.value)
+                ?: year?.let { Pgn.dateToMillis("%04d.01.01".format(java.util.Locale.ROOT, it)) },
+        )
+        DatePickerDialog(
+            onDismissRequest = { datePicker = false },
+            confirmButton = {
+                TextButton({
+                    state.selectedDateMillis?.let { date.value = Pgn.millisToDate(it) }
+                    datePicker = false
+                }, enabled = state.selectedDateMillis != null) { Text(stringResource(R.string.ok)) }
+            },
+            dismissButton = { TextButton({ datePicker = false }) { Text(stringResource(R.string.cancel)) } },
+        ) { DatePicker(state) }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.game_data)) },
@@ -889,6 +915,9 @@ private fun TagDialog(game: Game, onDismiss: () -> Unit, onOk: (Map<String, Stri
                         st.value, { st.value = it }, Modifier.fillMaxWidth(),
                         label = { Text(labels[k]?.let { stringResource(it) } ?: k) }, singleLine = true,
                         keyboardOptions = if (k.endsWith("Elo")) KeyboardOptions(keyboardType = KeyboardType.Number) else KeyboardOptions.Default,
+                        trailingIcon = if (k == "Date") {
+                            { IconButton({ datePicker = true }) { Icon(Icons.Default.CalendarMonth, stringResource(R.string.pick_date)) } }
+                        } else null,
                     )
                 }
             }

@@ -18,6 +18,23 @@
 package org.scidc2go.chess
 
 object Pgn {
+    /**
+     * PGN-Datum (`JJJJ.MM.TT`) als Millisekunden seit 1970 (UTC, wie der Datumswähler von Compose sie erwartet);
+     * null, wenn es nicht vollständig und gültig ist.
+     */
+    fun dateToMillis(date: String): Long? = try {
+        java.time.LocalDate.parse(date.trim(), PGN_DATE).atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+    } catch (_: java.time.format.DateTimeParseException) {
+        null
+    }
+
+    /** Millisekunden seit 1970 (UTC) als PGN-Datum `JJJJ.MM.TT`. */
+    fun millisToDate(millis: Long): String =
+        java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate().format(PGN_DATE)
+
+    private val PGN_DATE = java.time.format.DateTimeFormatter.ofPattern("uuuu.MM.dd")
+        .withResolverStyle(java.time.format.ResolverStyle.STRICT)
+
 
     /** Liest nur die Tags am Anfang eines Partietextes. */
     fun parseTags(text: CharSequence): LinkedHashMap<String, String> {
