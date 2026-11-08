@@ -77,6 +77,12 @@ def main():
             url = f"{GH_UP}/releases/{g['id']}/assets?name={urllib.parse.quote(a['name'])}"
             call(url, GH_H, data, content_type(a["name"]), "POST")
             print(f"{tag}: {a['name']} hochgeladen")
+    # make_latest beim Anlegen übernimmt GitHub nicht immer; deshalb zum Schluss ausdrücklich setzen
+    current = json.loads(call(f"{GH}/releases/latest", GH_H)).get("tag_name")
+    if current != latest:
+        rid = gh_json(f"{GH}/releases/tags/{latest}")["id"]
+        call(f"{GH}/releases/{rid}", GH_H, json.dumps({"make_latest": "true"}).encode(), "application/json", "PATCH")
+        print(f"{latest}: als neuestes Release markiert (war {current})")
     print("GitHub ist auf dem Stand von Forgejo")
 
 
