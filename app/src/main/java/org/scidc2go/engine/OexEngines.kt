@@ -17,11 +17,12 @@
  */
 package org.scidc2go.engine
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
+import androidx.core.net.toUri
 import org.scidc2go.AppLog
 import org.scidc2go.LocalizedIOException
 import org.scidc2go.R
@@ -59,6 +60,9 @@ object OexEngines {
             val authority = ai.metaData?.getString(AUTHORITY) ?: continue
             try {
                 val res = pm.getResourcesForApplication(ai.applicationInfo)
+                // Der OEX-Standard legt die Engine-Liste als res/xml/enginelist.xml der fremden App fest;
+                // ihre Ressourcen-ID kennen wir nicht, nur der Name führt dorthin.
+                @SuppressLint("DiscouragedApi")
                 val id = res.getIdentifier("enginelist", "xml", ai.packageName)
                 if (id == 0) continue
                 val parser = res.getXml(id)
@@ -91,7 +95,7 @@ object OexEngines {
             dir.mkdirs()
             exe.setWritable(true)
             val tmp = File(dir, "${e.fileName}.tmp")
-            val uri = Uri.parse("content://${e.authority}/${e.fileName}")
+            val uri = "content://${e.authority}/${e.fileName}".toUri()
             (ctx.contentResolver.openInputStream(uri) ?: throw LocalizedIOException(R.string.err_engine_unreadable, e.name)).use { input ->
                 tmp.outputStream().use { input.copyTo(it) }
             }

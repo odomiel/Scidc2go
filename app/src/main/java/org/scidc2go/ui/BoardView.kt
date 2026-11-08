@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -99,12 +100,12 @@ fun BoardView(
     onMove: (Move) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selected by remember(pos) { mutableStateOf(-1) }
+    var selected by remember(pos) { mutableIntStateOf(-1) }
     var promoChoices by remember { mutableStateOf<List<Move>>(emptyList()) }
     // gerade gezogene Figur: Startfeld und Fingerposition
-    var dragFrom by remember(pos) { mutableStateOf(-1) }
+    var dragFrom by remember(pos) { mutableIntStateOf(-1) }
     var dragPos by remember(pos) { mutableStateOf(Offset.Zero) }
-    var dragOver by remember(pos) { mutableStateOf(-1) }
+    var dragOver by remember(pos) { mutableIntStateOf(-1) }
     val targets = remember(pos, selected) { if (selected >= 0) legalTargets(selected) else emptySet() }
     val currentCandidates by rememberUpdatedState(candidates)
     val currentOnMove by rememberUpdatedState(onMove)

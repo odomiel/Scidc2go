@@ -33,6 +33,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -178,7 +179,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } catch (_: SecurityException) {
         }
         folderUri = uri
-        prefs.edit().putString("folder", uri.toString()).apply()
+        prefs.edit { putString("folder", uri.toString()) }
         refreshFolder()
     }
 
@@ -908,7 +909,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun changeMultiPv(n: Int) {
         multiPv = n.coerceIn(1, 5)
-        prefs.edit().putInt("multipv", multiPv).apply()
+        prefs.edit { putInt("multipv", multiPv) }
         engine?.setOption("MultiPV", multiPv.toString())
         analyzeCurrent()
     }
@@ -925,12 +926,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleComments() {
         showComments = !showComments
-        prefs.edit().putBoolean("showComments", showComments).apply()
+        prefs.edit { putBoolean("showComments", showComments) }
     }
 
     fun toggleVariations() {
         showVariations = !showVariations
-        prefs.edit().putBoolean("showVariations", showVariations).apply()
+        prefs.edit { putBoolean("showVariations", showVariations) }
     }
 
     /** Eigene Sprache der App gibt es erst ab Android 13; davor gilt immer die Systemsprache. */
@@ -957,7 +958,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleLogDetailed() {
         logDetailed = !logDetailed
         AppLog.detailed = logDetailed
-        prefs.edit().putBoolean("logDetailed", logDetailed).apply()
+        prefs.edit { putBoolean("logDetailed", logDetailed) }
         AppLog.i("Protokoll", if (logDetailed) "ausführlich" else "normal")
     }
 
@@ -983,7 +984,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun changeTheme(mode: ThemeMode) {
         themeMode = mode
-        prefs.edit().putString("theme", mode.name).apply()
+        prefs.edit { putString("theme", mode.name) }
     }
 
     fun refreshEngines() {
@@ -1003,7 +1004,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun selectEngine(id: String) {
         if (id == engineId) return
         engineId = id
-        prefs.edit().putString("engine", id).apply()
+        prefs.edit { putString("engine", id) }
         if (engineOn) {
             toggleEngine()
             toggleEngine()

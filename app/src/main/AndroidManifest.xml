@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Nur zum einmaligen Laden des Stockfish-Netzes -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -11,11 +12,13 @@
         </intent>
     </queries>
 
+    <!-- localeConfig (Sprachwahl pro App) wirkt erst ab Android 13; ältere Versionen übergehen es (UnusedAttribute) -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
+        tools:ignore="UnusedAttribute"
         android:supportsRtl="true"
         android:theme="@style/Theme.Scidc2go">
         <activity

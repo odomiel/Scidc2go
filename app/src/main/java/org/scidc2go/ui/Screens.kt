@@ -108,6 +108,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -459,7 +460,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
 @Composable
 fun GamesScreen(vm: AppViewModel, snackbar: SnackbarHostState, compact: Boolean) {
     val db = vm.db ?: return
-    var menuFor by remember { mutableStateOf(-1) }
+    var menuFor by remember { mutableIntStateOf(-1) }
     Scaffold(
         topBar = {
             TopAppBar(
