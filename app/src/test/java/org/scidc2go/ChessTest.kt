@@ -74,4 +74,31 @@ class ChessTest {
         assertEquals(Pgn.write(g), Pgn.write(again))
         assertNotNull(Game.setupPosition("8/P1k5/8/8/8/8/5Kp1/8 w - - 0 1"))
     }
+
+    /** Engine-Varianten: vorhandene Züge werden weiterverfolgt, verzweigt wird erst bei der ersten Abweichung. */
+    @Test fun addLine() {
+        val g = Pgn.parseGame("1. e4 e5 2. Nf3 Nc6 *")
+        fun line(from: org.scidc2go.chess.Node, vararg san: String): List<org.scidc2go.chess.Move> {
+            var p = from.pos
+            return san.map { sn -> p.parseSan(sn)!!.also { m -> p = p.copy().apply { play(m) } } }
+        }
+        val e4 = g.root.children[0]
+        // 1… e5 2. Nf3 d6: weicht im vierten Halbzug ab
+        val (last, created) = e4.addLine(line(e4, "e5", "Nf3", "d6", "d4"))
+        assertTrue(created)
+        assertEquals("d4", last.san)
+        val nf3 = e4.children[0].children[0]
+        assertEquals(listOf("Nc6", "d6"), nf3.children.map { it.san })
+        assertEquals(1, e4.children.size)
+        // dieselbe Folge noch einmal: nichts Neues
+        val (again, created2) = e4.addLine(line(e4, "e5", "Nf3", "d6", "d4"))
+        assertTrue(!created2)
+        assertTrue(again === last)
+        // am Partieende wird die Folge zur Fortsetzung
+        val end = g.root.mainLine().last()
+        end.addLine(line(end, "Bb5"))
+        assertEquals("Bb5", end.children.single().san)
+        assertEquals("1. e4 e5 2. Nf3 Nc6 ( 2... d6 3. d4 ) 3. Bb5 *", Pgn.write(g).substringAfter("\n\n").trim())
+    }
+
 }

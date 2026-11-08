@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -56,6 +57,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.NavigateBefore
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
@@ -82,6 +84,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -842,13 +845,24 @@ private fun EnginePanel(vm: AppViewModel) {
             val l = vm.engineLines.getOrNull(i)
             Row(
                 Modifier.fillMaxWidth()
-                    .combinedClickable(onClick = { l?.pv?.firstOrNull()?.let { vm.playUci(it) } })
+                    .combinedClickable(
+                        onClick = { l?.pv?.firstOrNull()?.let { vm.playUci(it) } },
+                        onLongClick = { l?.let { vm.addEngineLine(it) } },
+                    )
                     .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(l?.scoreText() ?: "", Modifier.width(56.dp), fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium)
-                Text(l?.let { vm.pvToSan(it.pv) } ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyMedium)
+                Text(l?.let { vm.pvToSan(it.pv) } ?: "", Modifier.weight(1f), maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                // kleines Symbol statt IconButton, damit die Zeilenhöhe gleich bleibt
+                Icon(
+                    Icons.AutoMirrored.Filled.PlaylistAdd, stringResource(R.string.add_engine_line),
+                    Modifier.padding(start = 4.dp).size(24.dp)
+                        .clickable(enabled = l != null) { l?.let { vm.addEngineLine(it) } },
+                    tint = if (l != null) LocalContentColor.current else LocalContentColor.current.copy(alpha = 0.38f),
+                )
             }
         }
     }

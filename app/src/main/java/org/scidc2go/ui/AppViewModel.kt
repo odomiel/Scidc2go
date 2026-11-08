@@ -438,6 +438,28 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         uciToMove(pos, uci)?.let { playMove(it) }
     }
 
+    /**
+     * Fügt die Engine-Variante [line] ab dem aktuellen Knoten in die Partie ein; Bewertung und Tiefe kommen als
+     * Kommentar an ihr Ende. Der aktuelle Knoten bleibt, damit die Analyse weiterläuft.
+     */
+    fun addEngineLine(line: EngineLine) {
+        val n = node ?: return
+        var pos = n.pos
+        val moves = ArrayList<Move>()
+        for (u in line.pv) {
+            val m = uciToMove(pos, u) ?: break
+            moves.add(m)
+            pos = pos.copy().also { it.play(m) }
+        }
+        if (moves.isEmpty()) return
+        val (last, created) = n.addLine(moves)
+        if (!created) { message = str(R.string.err_line_exists); return }
+        if (last.comment.isEmpty()) last.comment = "${line.scoreText()}/${line.depth}"
+        dirty = true
+        treeVersion++
+        message = str(R.string.engine_line_added)
+    }
+
     /** Anfang der Variante, in der [n] liegt (null = Hauptvariante). */
     private fun variationStart(n: Node): Node? {
         var v = n

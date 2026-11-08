@@ -50,6 +50,21 @@ class Node(val move: Move?, val parent: Node?, val pos: Position, val san: Strin
         return n
     }
 
+    /**
+     * Fügt die Zugfolge [moves] ab diesem Knoten ein. Vorhandene Züge werden weiterverfolgt, neue Knoten erst ab
+     * der ersten Abweichung angehängt, dort also als Variante (oder als Fortsetzung, wenn es noch keine gibt).
+     * Liefert den letzten Knoten der Folge und ob dabei Knoten neu entstanden sind.
+     */
+    fun addLine(moves: List<Move>): Pair<Node, Boolean> {
+        var n = this
+        var created = false
+        for (m in moves) {
+            val existing = n.children.firstOrNull { it.move == m }
+            n = existing ?: n.addChild(m, reuseExisting = false).also { created = true }
+        }
+        return n to created
+    }
+
     /** Ist dieser Knoten der Beginn einer Variante (nicht Hauptfortsetzung)? */
     val isVariationStart get() = parent != null && parent.children.indexOf(this) > 0
 

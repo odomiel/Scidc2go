@@ -118,6 +118,9 @@
     <string name="edit_tags">Edit game data</string>
     <string name="comment_move">Comment on move</string>
     <string name="promote_variation">Promote variation to main line</string>
+    <string name="add_engine_line">Insert as variation</string>
+    <string name="engine_line_added">Variation inserted</string>
+    <string name="err_line_exists">The line is already in the game</string>
     <string name="delete_variation">Delete variation</string>
     <string name="truncate">Delete remaining moves from here</string>
     <string name="copy_pgn">Copy PGN</string>

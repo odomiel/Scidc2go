@@ -108,6 +108,9 @@
     <string name="edit_tags">Partiedaten bearbeiten</string>
     <string name="comment_move">Kommentar zum Zug</string>
     <string name="promote_variation">Variante zur Hauptvariante</string>
+    <string name="add_engine_line">Als Variante einfügen</string>
+    <string name="engine_line_added">Variante eingefügt</string>
+    <string name="err_line_exists">Die Variante steht schon in der Partie</string>
     <string name="delete_variation">Variante löschen</string>
     <string name="truncate">Restliche Züge ab hier löschen</string>
     <string name="copy_pgn">PGN kopieren</string>
