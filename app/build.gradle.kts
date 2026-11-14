@@ -15,8 +15,8 @@ android {
         minSdk = 29
         // 37 erst, wenn auf Android 17 getestet werden kann
         targetSdk = 36
-        versionCode = 24
-        versionName = "0.18.0"
+        versionCode = 25
+        versionName = "0.18.1"
     }
 
     // Signierschlüssel für Release-Builds: keystore.properties (nicht im Repository)
