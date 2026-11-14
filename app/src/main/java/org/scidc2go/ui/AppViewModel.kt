@@ -154,6 +154,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         SafStorage.cleanArchives(ctx)
         refreshEngines()
         loadOpenings()
+        // Nach einer Wiederherstellung aus dem Backup steht der Ordner in den Einstellungen, die Freigabe aber nicht
+        folderUri?.let { uri ->
+            if (ctx.contentResolver.persistedUriPermissions.none { it.uri == uri }) {
+                AppLog.i("Ordner", "Keine Freigabe mehr für $uri")
+                folderUri = null
+                prefs.edit { remove("folder") }
+            }
+        }
         folderUri?.let { refreshFolder() }
         newGame()
     }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup bis Android 11: nur die Einstellungen. Das NNUE-Netz (rund 100 MB) und kopierte Engines liegen in
+  filesDir und würden die Grenze von 25 MB für Auto Backup sprengen, sodass gar nichts gesichert würde; sie
+  lassen sich ohnehin neu laden. Das Protokoll gehört nicht in ein Backup.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="." />
+</full-backup-content>
