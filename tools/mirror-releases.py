@@ -5,9 +5,12 @@ Code und Tags spiegelt Forgejo selbst (Push-Mirror); Releases mit Anhängen nich
 fehlende Releases auf GitHub an (älteste zuerst, das neueste als „latest“) und lädt fehlende Anhänge hoch.
 Vorhandene Releases und Anhänge bleiben unverändert, es kann also beliebig oft laufen.
 
-Tokens: ~/.config/forgejo/token (Lesen) und ~/.config/github/token (Fine-grained, Contents: Read and write).
+Von Forgejo wird nur gelesen; Repo und Releases sind öffentlich, deshalb ohne Token. Für GitHub:
+~/.config/github/token (Fine-grained, Contents: Read and write). Jeder hochgeladene Anhang wird über die
+SHA-256 geprüft, die GitHub zu ihm meldet.
 Aufruf: python3 -I tools/mirror-releases.py
 """
+import hashlib
 import json
 import os
 import sys
@@ -23,9 +26,22 @@ def token(name):
     return open(os.path.expanduser(f"~/.config/{name}/token")).read().strip()
 
 
-FJ_H = {"Authorization": f"token {token('forgejo')}"}
+FJ_H = {}
 GH_H = {"Authorization": f"Bearer {token('github')}", "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28"}
+
+
+class _NoAuthToOtherHosts(urllib.request.HTTPRedirectHandler):
+    """urllib gibt den Authorization-Kopf sonst bei Umleitungen auch an fremde Hosts weiter."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is not None and urllib.parse.urlsplit(newurl).netloc != urllib.parse.urlsplit(req.full_url).netloc:
+            new.remove_header("Authorization")
+        return new
+
+
+_opener = urllib.request.build_opener(_NoAuthToOtherHosts)
 
 
 def call(url, headers, data=None, ctype=None, method=None):
@@ -33,7 +49,7 @@ def call(url, headers, data=None, ctype=None, method=None):
     if ctype:
         h["Content-Type"] = ctype
     r = urllib.request.Request(url, data=data, headers=h, method=method)
-    with urllib.request.urlopen(r, timeout=300) as resp:
+    with _opener.open(r, timeout=300) as resp:
         return resp.read()
 
 
@@ -71,12 +87,18 @@ def main():
         for a in r["assets"]:
             if a["name"] in have:
                 continue
-            data = call(a["browser_download_url"], FJ_H)
+            src = a["browser_download_url"]
+            if urllib.parse.urlsplit(src).netloc != urllib.parse.urlsplit(FJ).netloc:
+                sys.exit(f"{a['name']}: Download-Adresse {src} liegt nicht auf Forgejo")
+            data = call(src, FJ_H)
             if len(data) != a["size"]:
                 sys.exit(f"{a['name']}: {len(data)} statt {a['size']} Bytes geladen")
+            sha = hashlib.sha256(data).hexdigest()
             url = f"{GH_UP}/releases/{g['id']}/assets?name={urllib.parse.quote(a['name'])}"
-            call(url, GH_H, data, content_type(a["name"]), "POST")
-            print(f"{tag}: {a['name']} hochgeladen")
+            up = json.loads(call(url, GH_H, data, content_type(a["name"]), "POST"))
+            if up.get("digest") != f"sha256:{sha}":
+                sys.exit(f"{a['name']}: GitHub meldet {up.get('digest')} statt sha256:{sha}")
+            print(f"{tag}: {a['name']} hochgeladen (SHA-256 {sha[:12]}…)")
     # make_latest beim Anlegen übernimmt GitHub nicht immer; deshalb zum Schluss ausdrücklich setzen
     current = json.loads(call(f"{GH}/releases/latest", GH_H)).get("tag_name")
     if current != latest:
