@@ -50,6 +50,7 @@ data class OexEngine(
 object OexEngines {
     private const val ACTION = "intent.chess.provider.ENGINE"
     private const val AUTHORITY = "chess.provider.engine.authority"
+    private val SAFE_FILE_NAME = Regex("[A-Za-z0-9_][A-Za-z0-9._-]*")
 
     fun list(ctx: Context): List<OexEngine> {
         val pm = ctx.packageManager
@@ -70,6 +71,11 @@ object OexEngines {
                     if (parser.eventType != XmlPullParser.START_TAG || parser.name != "engine") continue
                     val name = parser.getAttributeValue(null, "name") ?: continue
                     val file = parser.getAttributeValue(null, "filename") ?: continue
+                    // wird Dateiname im eigenen Verzeichnis und Teil der Content-URI; „../“ o.ä. nicht zulassen
+                    if (!SAFE_FILE_NAME.matches(file)) {
+                        AppLog.w("Engine", "Engine-App ${ai.packageName}: ungültiger Dateiname „$file“")
+                        continue
+                    }
                     val targets = parser.getAttributeValue(null, "target")?.split('|')?.map { it.trim() } ?: continue
                     if (targets.none { it in abis }) continue
                     if (result.none { it.packageName == ai.packageName && it.fileName == file }) {
