@@ -277,8 +277,9 @@ object SafStorage {
             CountingInputStream(raw.buffered(1 shl 16)) { progress((it.toFloat() / total).coerceAtMost(1f)) }.use { inp ->
                 when (entry.format) {
                     DbFormat.SCIDB_ARCHIVE -> Archives.extractScidbArchive(inp, dir)
-                    DbFormat.PGN_GZ -> Archives.extractGzip(inp, File(dir, "${entry.baseName}.pgn"))
-                    else -> if (Archives.extractZipPgn(inp, File(dir, "${entry.baseName}.pgn")) == 0) {
+                    // Der Basisname stammt vom Dokumenten-Anbieter (DISPLAY_NAME) und wird hier zum lokalen Pfad
+                    DbFormat.PGN_GZ -> Archives.extractGzip(inp, Archives.fileIn(dir, "${entry.baseName}.pgn"))
+                    else -> if (Archives.extractZipPgn(inp, Archives.fileIn(dir, "${entry.baseName}.pgn")) == 0) {
                         throw LocalizedIOException(R.string.err_zip_no_pgn, "${entry.baseName}.zip")
                     }
                 }

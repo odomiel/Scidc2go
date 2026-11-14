@@ -184,4 +184,21 @@ class ArchiveTest {
         broken.writeBytes(bytes.copyOf(bytes.size - 40))
         Archives.extract7z(broken, createTempDirectory().toFile())
     }
+
+    /** Namen von Dokumenten-Anbietern oder aus Archiven dürfen nicht aus dem Arbeitsverzeichnis herausführen. */
+    @Test fun fileInStaysInDir() {
+        val dir = createTempDirectory().toFile()
+        for (name in listOf("../../files/x.pgn", "..\\x.pgn", "/etc/x.pgn", "a/b.pgn", "WM: 2024.pgn")) {
+            val f = Archives.fileIn(dir, name)
+            assertEquals(name, dir.canonicalFile, f.canonicalFile.parentFile)
+        }
+        assertEquals("WM: 2024.pgn", Archives.fileIn(dir, "WM: 2024.pgn").name)
+        for (name in listOf("..", ".", "", "  ")) {
+            try {
+                Archives.fileIn(dir, name)
+                throw AssertionError("'$name' wurde angenommen")
+            } catch (_: LocalizedIOException) {
+            }
+        }
+    }
 }

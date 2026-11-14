@@ -48,6 +48,18 @@ import java.util.zip.ZipInputStream
 object Archives {
 
     /**
+     * Datei [name] direkt in [dir]. Der Name kommt von außen (Dokumenten-Anbieter, Archivinhalt) und könnte `../`
+     * enthalten; Trennzeichen und Steuerzeichen werden ersetzt, und das Ergebnis muss wirklich in [dir] liegen.
+     */
+    fun fileIn(dir: File, name: String): File {
+        val clean = name.replace(Regex("""[\\/\p{Cntrl}]"""), "_").trim()
+        if (clean.isEmpty() || clean.all { it == '.' }) throw LocalizedIOException(R.string.err_bad_filename, name)
+        val f = File(dir, clean)
+        if (f.canonicalFile.parentFile != dir.canonicalFile) throw LocalizedIOException(R.string.err_bad_filename, name)
+        return f
+    }
+
+    /**
      * Entpackt ein Scidb-Archiv nach [dir] (wie `archive::unpack` in Scidbs `tcl/utils/archive.tcl`).
      * Aufbau: Zeile `iveArch`, Kopfzeilen `<Attr> Wert`, dann je Datei die Zeile `<-- H E A D -->`,
      * Attribute (FileName, Size, Compression raw|zlib, Checksum = CRC-32 der gespeicherten Bytes),
@@ -75,7 +87,7 @@ object Archives {
             val stored = LimitedInputStream(inp, size)
             val crc = CRC32()
             val checked = CheckedInputStream(stored, crc)
-            File(dir, name).outputStream().use { out ->
+            fileIn(dir, name).outputStream().use { out ->
                 when (val c = attrs["Compression"] ?: "raw") {
                     "raw" -> checked.copyTo(out)
                     "zlib" -> InflaterInputStream(checked).copyTo(out)
@@ -128,7 +140,7 @@ object Archives {
             ?: base("si4")?.let { Scid4Database(JavaFileSet(dir, it)) }
             ?: base("si3")?.let { Scid4Database(JavaFileSet(dir, it), v3 = true) }
             ?: find("pgn.gz")?.let { gz ->
-                val out = File(dir, "entpackt-$name.pgn")
+                val out = fileIn(dir, "entpackt-$name.pgn")
                 File(dir, gz).inputStream().use { extractGzip(it, out) }
                 pgn(out)
             }
@@ -152,7 +164,7 @@ object Archives {
                 if (e.isDirectory || !e.hasStream() || e.isAntiItem) continue
                 val name = File((e.name ?: continue).replace('\\', '/')).name
                 if (name.isEmpty() || name == "." || name == ".." || name in names) continue
-                File(dir, name).outputStream().use { out ->
+                fileIn(dir, name).outputStream().use { out ->
                     while (true) {
                         val n = z.read(buf)
                         if (n < 0) break
