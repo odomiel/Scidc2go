@@ -30,8 +30,10 @@ import org.tukaani.xz.LZMA2Options
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FilterInputStream
+import java.io.FilterOutputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.util.Date
 import java.util.zip.CRC32
@@ -51,6 +53,18 @@ object Archives {
      * Datei [name] direkt in [dir]. Der Name kommt von außen (Dokumenten-Anbieter, Archivinhalt) und könnte `../`
      * enthalten; Trennzeichen und Steuerzeichen werden ersetzt, und das Ergebnis muss wirklich in [dir] liegen.
      */
+    /** So viel Speicher bleibt beim Entpacken mindestens frei (Schutz vor „Zip-Bomben“); in Tests veränderbar. */
+    internal var reserveBytes = 100L shl 20
+
+    /**
+     * Ausgabe beim Entpacken nach [f]; bricht mit einer Meldung ab, bevor der Speicher fast voll ist.
+     * `usableSpace` statt `StorageManager.getAllocatableBytes`: rechnet keinen löschbaren Cache mit (vorsichtiger)
+     * und braucht keinen Context, den diese Schicht nicht hat.
+     */
+    @Suppress("UsableSpace")
+    private fun extractTo(f: File): OutputStream =
+        SpaceLimitedOutputStream(f.outputStream(), (f.absoluteFile.parentFile!!.usableSpace - reserveBytes).coerceAtLeast(0))
+
     fun fileIn(dir: File, name: String): File {
         val clean = name.replace(Regex("""[\\/\p{Cntrl}]"""), "_").trim()
         if (clean.isEmpty() || clean.all { it == '.' }) throw LocalizedIOException(R.string.err_bad_filename, name)
@@ -87,7 +101,7 @@ object Archives {
             val stored = LimitedInputStream(inp, size)
             val crc = CRC32()
             val checked = CheckedInputStream(stored, crc)
-            fileIn(dir, name).outputStream().use { out ->
+            extractTo(fileIn(dir, name)).use { out ->
                 when (val c = attrs["Compression"] ?: "raw") {
                     "raw" -> checked.copyTo(out)
                     "zlib" -> InflaterInputStream(checked).copyTo(out)
@@ -108,7 +122,7 @@ object Archives {
 
     /** Entpackt eine gzip-Datei nach [out]. */
     fun extractGzip(input: InputStream, out: File) {
-        GZIPInputStream(input, 1 shl 16).use { gz -> out.outputStream().use { gz.copyTo(it) } }
+        GZIPInputStream(input, 1 shl 16).use { gz -> extractTo(out).use { gz.copyTo(it) } }
     }
 
     /**
@@ -118,7 +132,7 @@ object Archives {
     fun extractZipPgn(input: InputStream, out: File): Int {
         var count = 0
         ZipInputStream(input).use { zip ->
-            out.outputStream().buffered().use { o ->
+            extractTo(out).buffered().use { o ->
                 while (true) {
                     val e = zip.nextEntry ?: break
                     if (e.isDirectory || !e.name.lowercase().endsWith(".pgn")) continue
@@ -164,7 +178,7 @@ object Archives {
                 if (e.isDirectory || !e.hasStream() || e.isAntiItem) continue
                 val name = File((e.name ?: continue).replace('\\', '/')).name
                 if (name.isEmpty() || name == "." || name == ".." || name in names) continue
-                fileIn(dir, name).outputStream().use { out ->
+                extractTo(fileIn(dir, name)).use { out ->
                     while (true) {
                         val n = z.read(buf)
                         if (n < 0) break
@@ -271,6 +285,16 @@ object Archives {
             buf.write(b)
         }
     }
+}
+
+/** Schreibt höchstens [limit] Bytes nach [out]; darüber hinaus fehlt Speicher (oder das Archiv ist präpariert). */
+private class SpaceLimitedOutputStream(out: OutputStream, private var limit: Long) : FilterOutputStream(out) {
+    private fun take(n: Int) {
+        limit -= n
+        if (limit < 0) throw LocalizedIOException(R.string.err_no_space)
+    }
+    override fun write(b: Int) { take(1); out.write(b) }
+    override fun write(b: ByteArray, off: Int, len: Int) { take(len); out.write(b, off, len) }
 }
 
 /** Liest höchstens [limit] Bytes aus [inp], ohne ihn zu schließen. */

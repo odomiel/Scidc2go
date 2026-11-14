@@ -201,4 +201,28 @@ class ArchiveTest {
             }
         }
     }
+
+    /** Ein Archiv, das sich zu mehr entpackt als frei ist, bricht mit einer Meldung ab („Zip-Bombe“). */
+    @Test fun extractStopsBeforeDiskIsFull() {
+        val dir = createTempDirectory().toFile()
+        val bytes = ByteArrayOutputStream().also { b -> GZIPOutputStream(b).use { it.write(ByteArray(20 shl 20)) } }.toByteArray()
+        assertTrue(bytes.size < 100_000)
+        val old = Archives.reserveBytes
+        try {
+            // so tun, als wären nur noch 1 MB über der Reserve frei
+            Archives.reserveBytes = dir.usableSpace - (1 shl 20)
+            try {
+                Archives.extractGzip(bytes.inputStream(), File(dir, "bombe.pgn"))
+                throw AssertionError("Entpacken nicht abgebrochen")
+            } catch (e: LocalizedIOException) {
+                assertEquals(R.string.err_no_space, e.text.res)
+            }
+            assertTrue(File(dir, "bombe.pgn").length() <= 1 shl 20)
+        } finally {
+            Archives.reserveBytes = old
+        }
+        // mit normaler Reserve geht es
+        Archives.extractGzip(bytes.inputStream(), File(dir, "ok.pgn"))
+        assertEquals(20L shl 20, File(dir, "ok.pgn").length())
+    }
 }
