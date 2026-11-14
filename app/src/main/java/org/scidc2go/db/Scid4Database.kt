@@ -67,6 +67,16 @@ class Scid4Database(private val files: DbFileSet, private val v3: Boolean = fals
         p += 12
         val maxFreq = IntArray(4) { u24(d, p + it * 3) }
         p += 12
+        // Jeder Name belegt mindestens 4 Bytes; größere Zahlen im Kopf sind beschädigt (und würden Speicher belegen)
+        if (num.sumOf { it.toLong() } * 4 > d.size) throw LocalizedIOException(R.string.err_corrupt_names)
+        // beschädigte Längen laufen über das Pufferende
+        return try { readNameLists(d, p, num, maxFreq) } catch (_: IndexOutOfBoundsException) {
+            throw LocalizedIOException(R.string.err_corrupt_names)
+        }
+    }
+
+    private fun readNameLists(d: ByteArray, start: Int, num: IntArray, maxFreq: IntArray): Array<Array<String>> {
+        var p = start
         return Array(4) { nt ->
             val arr = Array(num[nt]) { "?" }
             val buf = ByteArray(256)

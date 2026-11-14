@@ -204,6 +204,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) {
                 AppLog.e("Fehler", label, e)
                 message = e.userMessage(ctx)
+            } catch (e: OutOfMemoryError) {
+                // z.B. eine beschädigte oder riesige Datei; die App läuft weiter, der Speicher ist wieder frei
+                AppLog.e("Fehler", label, e)
+                message = str(R.string.err_out_of_memory)
             } finally {
                 busy = null
             }

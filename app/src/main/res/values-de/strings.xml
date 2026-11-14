@@ -240,6 +240,7 @@
     <string name="err_no_scid_index">Keine Scid-Indexdatei</string>
     <string name="err_scid_version">Unbekannte Scid-Version %d</string>
     <string name="err_no_scid_names">Keine Scid-Namensdatei</string>
+    <string name="err_out_of_memory">Nicht genug Speicher. Die Datei ist vielleicht beschädigt oder zu groß.</string>
     <string name="err_corrupt_names">Defekte Namensdatei</string>
     <string name="err_scid5_index">Defekte Scid-5-Indexdatei</string>
     <string name="err_game_too_large">Partie zu groß für das Scid-5-Format</string>

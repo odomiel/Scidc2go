@@ -131,6 +131,7 @@ internal fun FileChannel.readAll(): ByteArray {
 
 /** Dekodiert Text als UTF-8, bei ungültigen Sequenzen als ISO-8859-1. */
 fun decodeText(bytes: ByteArray, off: Int = 0, len: Int = bytes.size - off): String {
+    if (off < 0 || len < 0 || off + len > bytes.size) throw LocalizedIOException(R.string.err_data_end)
     var ascii = true
     for (i in off until off + len) if (bytes[i] < 0) { ascii = false; break }
     if (ascii) return String(bytes, off, len, Charsets.ISO_8859_1)

@@ -251,6 +251,7 @@
     <string name="err_no_scid_index">Not a Scid index file</string>
     <string name="err_scid_version">Unknown Scid version %d</string>
     <string name="err_no_scid_names">Not a Scid name file</string>
+    <string name="err_out_of_memory">Not enough memory. The file may be damaged or too large.</string>
     <string name="err_corrupt_names">Corrupt name file</string>
     <string name="err_scid5_index">Corrupt Scid 5 index file</string>
     <string name="err_game_too_large">Game too large for the Scid 5 format</string>

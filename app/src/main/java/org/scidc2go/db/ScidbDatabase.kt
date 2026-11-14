@@ -96,6 +96,7 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
                 's' -> si = readSection(r, size, nextId, SectionKind.SITE, null)
                 'e' -> {
                     val siteLk = si?.second ?: throw LocalizedIOException(R.string.err_scidb_names)
+                    if (size < 0 || size.toLong() * 4 > r.end - r.p) throw LocalizedIOException(R.string.err_scidb_names)
                     val evSites = IntArray(size)
                     val res = readSection(r, size, nextId, SectionKind.EVENT, siteLk to evSites)
                     ev = Triple(res.first, res.second, evSites)
@@ -120,6 +121,8 @@ class ScidbDatabase(private val files: DbFileSet) : ChessDatabase {
     private fun readSection(
         r: Reader, count: Int, nextId: Int, kind: SectionKind, eventExtra: Pair<IntArray, IntArray>?,
     ): Pair<Array<String>, IntArray> {
+        // Jeder Eintrag belegt mindestens 4 Bytes; größere Zahlen im Kopf sind beschädigt (und würden Speicher belegen)
+        if (count < 0 || count.toLong() * 4 > r.end - r.p) throw LocalizedIOException(R.string.err_scidb_names)
         val names = Array(count) { "" }
         val lookup = IntArray(maxOf(nextId, 0)) { -1 }
         var prev = ByteArray(0)
