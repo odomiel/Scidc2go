@@ -29,11 +29,13 @@ import java.security.MessageDigest
 
 /**
  * Das NNUE-Netz von Stockfish ist zu groß für die APK und wird beim ersten Start
- * der Engine von stockfishchess.org geladen. Name und Größe trägt tools/build-stockfish.sh ein.
+ * der Engine von stockfishchess.org geladen. Name, Größe und SHA-256 trägt tools/build-stockfish.sh ein.
  */
 object StockfishNet {
     const val NAME = "nn-1a298aa575a0.nnue"
     const val SIZE = 98_511_183L
+    /** Vollständige Prüfsumme; der Name enthält nur ihre ersten 48 Bit. */
+    const val SHA256 = "1a298aa575a085434d29027978dc36867fe9c5bcea9376654b7a8eba1e52dfc2"
 
     private val urls = listOf(
         "https://tests.stockfishchess.org/api/nn/$NAME",
@@ -42,7 +44,7 @@ object StockfishNet {
 
     fun file(dir: File) = File(dir, NAME)
 
-    /** Lädt das Netz nach [dir] und prüft es: Der Name enthält den Anfang seiner SHA-256-Prüfsumme. */
+    /** Lädt das Netz nach [dir] und prüft Größe und SHA-256. */
     fun download(dir: File, progress: (Float) -> Unit): File {
         val target = file(dir)
         val tmp = File(dir, "$NAME.tmp")
@@ -51,7 +53,7 @@ object StockfishNet {
             try {
                 AppLog.i("Netz", "Lade $url")
                 fetch(url, tmp, progress)
-                tmp.renameTo(target)
+                if (!tmp.renameTo(target)) throw IOException("$NAME.tmp lässt sich nicht umbenennen")
                 // ältere Netze früherer Versionen entfernen
                 dir.listFiles()?.filter { it.name.endsWith(".nnue") && it.name != NAME }?.forEach { it.delete() }
                 return target
@@ -86,7 +88,7 @@ object StockfishNet {
                 }
             }
             val hash = sha.digest().joinToString("") { "%02x".format(it) }
-            if (done != SIZE || !NAME.startsWith("nn-" + hash.take(12))) throw LocalizedIOException(R.string.err_checksum)
+            if (done != SIZE || hash != SHA256) throw LocalizedIOException(R.string.err_checksum)
         } finally {
             conn.disconnect()
         }
